@@ -38,6 +38,10 @@ class Settings:
     google_client_id: str
     soc_webhook_url: str | None
     enable_api_docs: bool
+    # LLM step (ADR-019). Without a key the backend runs deterministic-only (ADR-005).
+    anthropic_api_key: str | None = None
+    llm_enabled: bool = True
+    llm_model: str = "claude-haiku-5-5"
 
     @property
     def mode(self) -> Mode:
@@ -51,4 +55,7 @@ def get_settings() -> Settings:
         google_client_id=_env_required("GOOGLE_CLIENT_ID"),
         soc_webhook_url=_env_str("SOC_WEBHOOK_URL"),
         enable_api_docs=_env_bool("ENABLE_API_DOCS", default=False),
+        anthropic_api_key=_env_str("ANTHROPIC_API_KEY"),
+        llm_enabled=_env_bool("LLM_ENABLED", default=True),
+        llm_model=_env_str("LLM_MODEL") or "claude-haiku-5-5",
     )

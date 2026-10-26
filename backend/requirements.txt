@@ -7,3 +7,4 @@ requests==2.34.2
 tldextract==5.4.0
 idna==3.20
 beautifulsoup4==4.15.0
+anthropic==2.3.0

@@ -19,7 +19,9 @@ AUTH_HEADERS = {"Authorization": f"Bearer {VALID_TOKEN}"}
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     # Tests never depend on the developer's shell or .env.
-    for name in ("SOC_WEBHOOK_URL", "ENABLE_API_DOCS"):
+    # No real LLM call either: tests that need one install a fake client.
+    for name in ("SOC_WEBHOOK_URL", "ENABLE_API_DOCS", "ANTHROPIC_API_KEY", "LLM_ENABLED",
+                 "LLM_MODEL"):  # fmt: skip
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("GOOGLE_CLIENT_ID", TEST_CLIENT_ID)
     get_settings.cache_clear()
