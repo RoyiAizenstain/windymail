@@ -69,6 +69,10 @@ def to_reasons(findings: list[Finding]) -> list[Reason]:
                 details=f"{message.details}: {', '.join(values)}" if values else message.details,
             )
         )
+    return sort_reasons(reasons)
+
+
+def sort_reasons(reasons: list[Reason]) -> list[Reason]:
     return sorted(reasons, key=lambda reason: _SEVERITY_ORDER[reason.severity])
 
 

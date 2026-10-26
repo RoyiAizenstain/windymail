@@ -239,6 +239,19 @@ CATALOG: dict[str, Message] = {
         "checks.",
         details="Phrases addressed to an AI or a scanner",
     ),
+    # Found by the LLM only (ADR-019): what the rules missed, fixed wording, capped points.
+    "llm_manipulation": Message(
+        category="manipulation",
+        severity="medium",
+        text="The way this email is written suggests it is trying to pressure you into acting.",
+        details="Pressure tactics found by the AI check and not by phrase",
+    ),
+    "llm_ai_instructions": Message(
+        category="content",
+        severity="medium",
+        text="This email seems to contain instructions meant to fool automated checks.",
+        details="Instructions to an AI found by the AI check and not by phrase",
+    ),
     "body_truncated": Message(
         category="content",
         severity="low",

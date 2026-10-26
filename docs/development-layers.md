@@ -221,7 +221,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 ---
 
 ## Layer 3: LLM Integration
-**Status:** In progress (27.10). Steps 1-3 done (decisions, ADR-019; rule-based language checks; LLM client, not yet called); Step 4 (merge into the analysis) next.
+**Status:** In progress (27.10). Steps 1-4 done (decisions, ADR-019; rule-based language checks; LLM client; merged into /analyze); Step 5 (card) next.
 **Stories:** US-04, US-09 · **ADRs:** 003, 004, 005
 
 - [ ] Psychological vector analysis
@@ -264,10 +264,11 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 - Check: tests pass with no network.
 
 **Step 4: Merge into the analysis**
-- [ ] `/analyze`: deterministic checks first, then the LLM; LLM labels become reasons with fixed wording; LLM points capped at +20, added only
-- [ ] `partial: true` when the LLM step fails (ADR-005); the add-on already shows the "Limited visibility" line
-- [ ] `manipulation` = deterministic and LLM labels together
-- [ ] Tests: an LLM answer of "nothing found" never lowers a deterministic score; the cap holds; failure gives `partial` with the deterministic result unchanged
+- [x] `/analyze` → `app/analysis.py`: rules first, then the LLM; the LLM adds only what the rules missed (`llm_manipulation` with the new tactics, `llm_ai_instructions` when no rule found injection), fixed wording, medium each; LLM points capped at +20 (`scoring.combined_score`), added only; low-confidence answers add nothing
+- [x] `partial: true` when the LLM step gives no answer (failure, no key, or `LLM_ENABLED=false`) (ADR-005); the add-on already shows the "Limited visibility" line
+- [x] `manipulation` = rule and LLM labels together (LLM labels only when confidence is not low)
+- [x] Tests (LLM answer simulated): the quiet CEO scam the rules miss and the LLM catches; agreement not counted twice; only new tactics listed; cap holds with two LLM reasons; a fooled LLM ("nothing here") never lowers the phishing fixtures; low confidence ignored; no answer gives `partial` with the rules' verdict (12 new, 391 total)
+- Note: until `ANTHROPIC_API_KEY` is set in Render, every card shows the "Limited visibility" line
 - Check: all fixtures still pass with the LLM mocked out.
 
 **Step 5: Card**
