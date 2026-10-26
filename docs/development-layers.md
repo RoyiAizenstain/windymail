@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (Steps 1-5 done; Step 2 waits on `clasp push`)
+**Status:** In progress (Steps 1-5 done; Step 6 code in, its tests not yet written; Step 2 waits on `clasp push`)
 **Stories:** US-02, US-03, US-10
 
 - [ ] Add-on extracts headers, body (text + HTML), attachment metadata

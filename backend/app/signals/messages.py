@@ -86,6 +86,60 @@ CATALOG: dict[str, Message] = {
         "a trick used to imitate real addresses.",
         details="Domain (punycode form)",
     ),
+    # Links
+    "link_script": Message(
+        category="link",
+        severity="high",
+        text="A link in this email runs code instead of opening a web page.",
+        text_many="{count} links in this email run code instead of opening a web page.",
+        details="Link type",
+    ),
+    "link_text_mismatch": Message(
+        category="link",
+        severity="high",
+        text="A link shows one web address but really goes to a different one.",
+        text_many="{count} links show one web address but really go to a different one.",
+        details="Address shown, then the real destination",
+    ),
+    "link_lookalike": Message(
+        category="link",
+        severity="high",
+        text="A link goes to a site that imitates a well-known company's web address.",
+        text_many="{count} links go to sites that imitate a well-known company's web address.",
+        details="Brand imitated, then the lookalike domain",
+    ),
+    "link_brand_in_domain": Message(
+        category="link",
+        severity="medium",
+        text="A link uses a well-known company's name, "
+        "but goes to a site that doesn't belong to that company.",
+        text_many="{count} links use a well-known company's name, "
+        "but go to sites that don't belong to that company.",
+        details="Brand named, then the destination domain",
+    ),
+    "link_mixed_script": Message(
+        category="link",
+        severity="medium",
+        text="A link's address mixes letters from different alphabets, "
+        "a trick used to imitate real sites.",
+        text_many="{count} links' addresses mix letters from different alphabets, "
+        "a trick used to imitate real sites.",
+        details="Destination domain (punycode form)",
+    ),
+    "link_ip": Message(
+        category="link",
+        severity="medium",
+        text="A link goes to a bare number address instead of a named website.",
+        text_many="{count} links go to bare number addresses instead of named websites.",
+        details="IP address",
+    ),
+    "link_shortener": Message(
+        category="link",
+        severity="low",
+        text="A link is shortened, which hides where it really goes.",
+        text_many="{count} links are shortened, which hides where they really go.",
+        details="Shortening service",
+    ),
     # Content
     "body_truncated": Message(
         category="content",
