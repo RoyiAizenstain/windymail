@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (26.10). Steps 1-7 done and live on the backend; Step 8 code done, live Gmail test waits on `clasp push`; Step 9 (README, threat model) not started.
+**Status:** In progress (27.10). Steps 1-7 done; add-on pushed; first live Gmail test found two backend issues (wrapped links, DMARC `p=none` newsletter), both fixed in `f0d0455` and pushed; waiting on Render redeploy and a second live check. Step 9 (README, threat model) not started.
 **Stories:** US-02, US-03, US-10
 
 - [x] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -137,7 +137,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - [x] Size budget: serialized payload kept under 190 KB (measured in UTF-8 bytes, not characters), trimming `body_html` first, then `body_text`; new request field `truncated: bool` so the backend knows (schema, models.py and architecture.md updated together)
 - [x] `logic.test.js` (27 checks): request building with body, attachments, oversized body trimmed to the budget (multibyte and emoji included, never splitting a surrogate pair), `truncated` set; backend accepts `truncated` (41 tests)
 - [x] Deploy order, backend first (it rejects unknown fields, so an add-on sending `truncated` to the old backend gets 422): backend live on Render (26.10, 18:35)
-- [ ] **You:** `git pull`, then `clasp push` the add-on
+- [x] **You:** `git pull`, then `clasp push` the add-on (27.10)
 - Check: a long newsletter still gets a card; the request on Render stays under 200 KB.
 - Note: truncation is an evasion path (padding pushes a link past the cut). It becomes a finding ("Too long to check fully", low), not a silent gap, and is listed under Known Limitations.
 
@@ -154,7 +154,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 
 **Step 4: Sender checks**
 - [x] SPF, DKIM, DMARC from `Authentication-Results`; only the result whose authserv-id is `mx.google.com` is trusted, because a sender can add a forged `Authentication-Results` header of their own
-- [x] Severity: `dmarc=fail` high; `spf` or `dkim` fail medium; header missing or no result low ("couldn't confirm who sent this")
+- [x] Severity: `dmarc=fail` high (medium when the domain's policy is `p=none`, see below); `spf` or `dkim` fail medium; header missing or no result low ("couldn't confirm who sent this")
 - [x] Display name vs address: display name contains an email address or domain that differs from the real one, or names a known brand that the sending domain doesn't belong to
 - [x] Reply-To vs From: different registered domain → medium
 - [x] Tests per case, including a forged second `Authentication-Results` header claiming `pass` (45 new, 120 total)
@@ -184,7 +184,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - [x] Link destinations also go through the Step 5 lookalike check (`link_lookalike`, `link_brand_in_domain`)
 - Note: newsletter services route every link through click-tracking domains (`sendgrid.net`, `list-manage.com`, ...), so the text-vs-destination check skips a short list of them; all other checks still run on those links
 - [x] Redirect wrappers unwrapped before every check (found in the live test, 27.10): `google.com/url?q=` and Outlook SafeLinks carry the real target inside the link, and the checks saw only google.com (missed the IP link, two false mismatches). Parsed, never followed; nesting capped at 5. Fixture `wrapped_links.json` reproduces the live email (→ Malicious, 80)
-- [x] Generic, any site: web addresses carried inside a link (`?to=https://...`, up to 10) also get the IP, shortener and lookalike checks, since any open redirect can forward to them. They are not trusted for the text-vs-destination check (an attacker could add `?x=https://paypal.com` as a decoy), so that check uses the link's own site except for the known redirectors; 283 backend tests
+- [x] Generic, any site: web addresses carried inside a link (`?to=https://...`, up to 10) also get the IP, shortener and lookalike checks, since any open redirect can forward to them. They are not trusted for the text-vs-destination check (an attacker could add `?x=https://paypal.com` as a decoy), so that check uses the link's own site except for the known redirectors; 292 backend tests (with ADR-018)
 - Note: whitespace handled as browsers do (WHATWG): ends trimmed, tabs and newlines removed anywhere, a space inside the host makes the URL invalid; a host ending in a number that is not a valid IPv4 is invalid too
 - Check: tests pass.
 
@@ -201,15 +201,21 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - [x] Each reason shows a severity word ("High risk", "Worth checking", "Minor") before its text, so severity never relies on color (ADR-015)
 - [x] Collapsible "Technical details" section (US-10): each reason's `details` (auth results appear there when they fail), collapsed by default; unknown severities from the backend are dropped to no word (T8); 31 add-on checks
 - [x] Backend with all Layer 2 checks deployed and live on Render (`69ac515`, 26.10, 19:10)
-- [x] Phishing test email sent via the Gmail connector from and to royi.aizen@gmail.com, subject "[WindyMail test] Phishing: your account is limited": link text `www.paypal.com` going to `example.org`, a link to `http://3232235777/` (192.168.1.1), a hidden link, `Account-Review.html` attachment; only reserved or private addresses. Expected about 80, Malicious. Sent from a real Gmail address, so the display-name, Reply-To and lookalike-sender checks are not exercised here (they are in the JSON fixture)
+- [x] Phishing test email sent via the Gmail connector (from royiai@post.bgu.ac.il to royi.aizen@gmail.com), subject "[WindyMail test] Phishing: your account is limited": link text `www.paypal.com` going to `example.org`, a link to `http://3232235777/` (192.168.1.1), a hidden link, `Account-Review.html` attachment; only reserved or private addresses. Expected about 80, Malicious. Sent from a real Gmail address, so the display-name, Reply-To and lookalike-sender checks are not exercised here (they are in the JSON fixture)
 - [ ] Clean test email: the connector send was blocked by the session's permission check; any normal personal email in the inbox serves instead
-- [ ] **You:** `clasp push` (Step 2), then open in Gmail: the phishing test email (forward it to the demo account if that is a different account), a normal personal email, a long newsletter; expand "Technical details" once; report what each card shows
+- [x] First live run (27.10), after `clasp push`:
+  - Phishing test email: 65, Suspicious, not the expected 80. Every link in it was wrapped in `google.com/url?q=`, so the checks saw google.com: the IP link was missed and two honest links were flagged as mismatches. Fixed in Step 6 (redirect unwrapping and embedded-URL checks)
+  - Real newsletter (shotim.co.il): 35, Suspicious, only for `dmarc=fail`. Fixed by ADR-018 (`p=none` → medium); its real `Authentication-Results` line not yet seen, so the policy is assumed
+  - Card layout, severity words and "Technical details" worked as designed
+- [x] Both fixes committed and pushed (`f0d0455`, 27.10); Render redeploys from `main`
+- [ ] **You:** once the deploy is Live, reopen in Gmail: the phishing test email (expected Malicious, 80, with the IP link), the shotim newsletter (expected Safe, 15, medium sender reason), a normal personal email (expected Safe); report what each card shows
+- [ ] Optional: paste shotim's `Authentication-Results: mx.google.com;` line (Show original) to confirm `p=NONE`
 - [x] JSON copies of the same cases in `backend/tests/fixtures/` as end-to-end API tests (clean → Safe, no reasons; phishing → Malicious, 6 reasons; newsletter → Safe, only "too long"); 259 backend tests
 - Check: the phishing email shows concrete, correct reasons in Gmail; the clean email shows Safe; the newsletter is not flagged for hidden text.
 
 **Step 9: Close the layer**
 - [ ] README: signals section (what is checked, why, and known blind spots)
-- [ ] threat-model.md: T3 mitigations filled in; truncation and bundled suffix list added to Known Limitations
+- [ ] threat-model.md: T3 mitigations filled in (incl. redirect unwrapping and embedded-URL checks); Known Limitations: truncation, bundled suffix list, spoofing a `p=none` domain gets only a medium sender reason (ADR-018), Proofpoint and Mimecast wrappers not unwrapped (target encoded or hidden), embedded URLs on unknown sites not trusted for the text check
 - [ ] Tick the boxes above, set Layer 2 status to Done
 
 ---
