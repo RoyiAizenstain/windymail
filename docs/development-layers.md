@@ -25,14 +25,14 @@ README is written along the way: each layer adds its section.
 ---
 
 ## Layer 1: End-to-End Skeleton
-**Status:** In progress (Steps 1-3 done, Step 4 next)
+**Status:** In progress (Steps 1-4 done, Step 5 next)
 **Stories:** US-01, US-12 · **ADRs:** 001, 002, 006, 012
 
 - [ ] Apps Script add-on with contextual trigger on message open
 - [ ] Card shows sender, subject, placeholder score
 - [x] FastAPI `/api/v1/analyze` returning mock JSON in the final response schema ([architecture.md](architecture.md))
 - [x] Backend deployed to Render free tier (ADR-012)
-- [ ] `GET /health` endpoint (unauthenticated, fixed response) + external keep-warm ping every 10 minutes
+- [x] `GET /health` endpoint (unauthenticated, fixed response) + external keep-warm ping every 5 minutes
 - [ ] Minimal OAuth scopes in `appsscript.json` (including `openid`)
 - [ ] Verify early that `ScriptApp.getIdentityToken()` returns a token the backend can validate (ADR-011)
 - [x] Config loaded from environment, `.env.example` committed
@@ -68,7 +68,7 @@ One step at a time; each step ends with its own check before the next starts. **
 - Check: `https://<service>.onrender.com/health` returns ok over HTTPS.
 
 **Step 4: Keep-warm ping**
-- [ ] **You:** free UptimeRobot (or cron-job.org) monitor on `/health`, interval 10 minutes or less
+- [x] UptimeRobot HTTP(s) monitor on `/health`, 5-minute interval; first ping seen in Render logs (17:26, 200 OK)
 - Check: monitor shows the service up; after 20+ idle minutes `/health` still answers fast.
 
 **Step 5: Add-on skeleton (no backend yet)**
@@ -142,7 +142,7 @@ One step at a time; each step ends with its own check before the next starts. **
 - [ ] Payload size limits and strict schema
 - [ ] Timeouts on outbound calls
 - [ ] Masking before LLM call
-- [ ] Logging hygiene
+- [ ] Logging hygiene (incl. replacing uvicorn's default access log, which records client IPs, with ADR-011 fields only)
 - [ ] Tests: missing/invalid token → 401, oversized → 413, rate limit → 429
 - [ ] README: security section and threat model
 
