@@ -25,7 +25,7 @@ README is written along the way: each layer adds its section.
 ---
 
 ## Layer 1: End-to-End Skeleton
-**Status:** In progress (Steps 1-5 done, Step 6 next)
+**Status:** In progress (Steps 1-6 done, Step 7 next)
 **Stories:** US-01, US-12 · **ADRs:** 001, 002, 006, 012
 
 - [x] Apps Script add-on with contextual trigger on message open
@@ -86,7 +86,8 @@ One step at a time; each step ends with its own check before the next starts. **
 - [x] Backend response validated before rendering (T8): known fields only, score integer 0-100, verdict and mode from fixed sets; anything else → error card
 - [x] Card renders verdict with ADR-014 label + plain word + action line, score, summary, reasons; all untrusted text escaped
 - [x] `addon/test/logic.test.js`: 17 Node checks of request building, response validation, escaping; `.claspignore` keeps tests out of Apps Script
-- [ ] **You:** open an email in Gmail and confirm the card shows the mock result
+- [x] Confirmed in Gmail: card shows 🌥️ Storm watch, Suspicious, 42/100, action line, summary, reason, sender, subject
+- [x] Add-on icon switched to blue (`air_googblue_48dp`) so it is visible in Gmail dark mode
 - Check: opening an email shows the mock result from the deployed backend.
 
 **Step 7: Identity token verification (ADR-011)**
