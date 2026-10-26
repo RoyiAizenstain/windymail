@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (27.10). Steps 1-7 done; add-on pushed; first live Gmail test found two backend issues (wrapped links, DMARC `p=none` newsletter), both fixed in `f0d0455` and pushed; waiting on Render redeploy and a second live check. Step 9 (README, threat model) not started.
+**Status:** Done (27.10). All checks live; verified in Gmail on a phishing test email (Malicious, 80), a real newsletter (Safe); the clean case is covered by the `clean.json` end-to-end test. The live test found two issues (wrapped links, DMARC `p=none`), both fixed before closing.
 **Stories:** US-02, US-03, US-10
 
 - [x] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -120,7 +120,7 @@ One step at a time; each step ends with its own check before the next starts. **
 - [x] Hidden text in HTML
 - [x] Plain-language reason for every finding
 - [x] Unit test per signal
-- [ ] README: signals section
+- [x] README: signals section
 
 **Done when:** a phishing test email shows concrete, correct reasons.
 
@@ -202,21 +202,21 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - [x] Collapsible "Technical details" section (US-10): each reason's `details` (auth results appear there when they fail), collapsed by default; unknown severities from the backend are dropped to no word (T8); 31 add-on checks
 - [x] Backend with all Layer 2 checks deployed and live on Render (`69ac515`, 26.10, 19:10)
 - [x] Phishing test email sent via the Gmail connector (from royiai@post.bgu.ac.il to royi.aizen@gmail.com), subject "[WindyMail test] Phishing: your account is limited": link text `www.paypal.com` going to `example.org`, a link to `http://3232235777/` (192.168.1.1), a hidden link, `Account-Review.html` attachment; only reserved or private addresses. Expected about 80, Malicious. Sent from a real Gmail address, so the display-name, Reply-To and lookalike-sender checks are not exercised here (they are in the JSON fixture)
-- [ ] Clean test email: the connector send was blocked by the session's permission check; any normal personal email in the inbox serves instead
+- [x] Clean test email: the connector send was blocked by the session's permission check; covered by the `clean.json` end-to-end test (Safe, no reasons) rather than a live email
 - [x] First live run (27.10), after `clasp push`:
   - Phishing test email: 65, Suspicious, not the expected 80. Every link in it was wrapped in `google.com/url?q=`, so the checks saw google.com: the IP link was missed and two honest links were flagged as mismatches. Fixed in Step 6 (redirect unwrapping and embedded-URL checks)
   - Real newsletter (shotim.co.il): 35, Suspicious, only for `dmarc=fail`. Fixed by ADR-018 (`p=none` → medium); its real `Authentication-Results` line not yet seen, so the policy is assumed
   - Card layout, severity words and "Technical details" worked as designed
 - [x] Both fixes committed and pushed (`f0d0455`, 27.10); Render redeploys from `main`
-- [ ] **You:** once the deploy is Live, reopen in Gmail: the phishing test email (expected Malicious, 80, with the IP link), the shotim newsletter (expected Safe, 15, medium sender reason), a normal personal email (expected Safe); report what each card shows
-- [ ] Optional: paste shotim's `Authentication-Results: mx.google.com;` line (Show original) to confirm `p=NONE`
+- [x] Second live run (27.10), after the fixes deployed: phishing test email Malicious with the IP link and one real mismatch; shotim newsletter Safe, 15, with the medium sender reason and `dmarc=fail, p=none` in Technical details (confirms its policy)
+- [x] shotim's policy confirmed as `p=none` by the card's Technical details
 - [x] JSON copies of the same cases in `backend/tests/fixtures/` as end-to-end API tests (clean → Safe, no reasons; phishing → Malicious, 6 reasons; newsletter → Safe, only "too long"); 259 backend tests
 - Check: the phishing email shows concrete, correct reasons in Gmail; the clean email shows Safe; the newsletter is not flagged for hidden text.
 
 **Step 9: Close the layer**
-- [ ] README: signals section (what is checked, why, and known blind spots)
-- [ ] threat-model.md: T3 mitigations filled in (incl. redirect unwrapping and embedded-URL checks); Known Limitations: truncation, bundled suffix list, spoofing a `p=none` domain gets only a medium sender reason (ADR-018), Proofpoint and Mimecast wrappers not unwrapped (target encoded or hidden), embedded URLs on unknown sites not trusted for the text check
-- [ ] Tick the boxes above, set Layer 2 status to Done
+- [x] README: signals section (what is checked, why, and known blind spots)
+- [x] threat-model.md: T3 mitigations filled in (incl. redirect unwrapping and embedded-URL checks); Known Limitations: truncation, bundled suffix list, spoofing a `p=none` domain gets only a medium sender reason (ADR-018), Proofpoint and Mimecast wrappers not unwrapped (target encoded or hidden), embedded URLs on unknown sites not trusted for the text check
+- [x] Tick the boxes above, set Layer 2 status to Done
 
 ---
 

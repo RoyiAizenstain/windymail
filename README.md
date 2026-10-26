@@ -4,7 +4,7 @@ A Gmail Add-on that analyzes an opened email and shows a maliciousness score (0-
 
 Built as a home assignment for the Upwind Security Analyst role. The brief: build a Gmail Add-on, backed by a backend service, that analyzes an opened email and presents a maliciousness score with a verdict and the reasoning behind it, treating emails, attachments, and external responses as untrusted input. The scope and signals were left open. The design priority is security first, product second: a smaller feature set that is secure, explainable, and stable in a live demo.
 
-> **Status:** work in progress. Layer 1 (end-to-end skeleton) is complete: the add-on runs in Gmail and gets an authenticated response from the deployed backend, which still returns a mock verdict. Real analysis comes next. Progress: [docs/development-layers.md](docs/development-layers.md).
+> **Status:** work in progress. Layers 1-2 are complete: the add-on runs in Gmail, gets an authenticated response from the deployed backend, and shows real findings from the deterministic signal engine with a provisional score. The LLM layer comes next. Progress: [docs/development-layers.md](docs/development-layers.md).
 
 ---
 
@@ -58,7 +58,24 @@ Gmail ── user opens an email ──▶ Gmail Add-on (Apps Script, runs on Go
 API contract, request flow, and component diagram: [docs/architecture.md](docs/architecture.md).
 
 ## Signals
-_To be written (Layer 2)._
+
+The backend runs deterministic checks on every email ([`backend/app/signals/`](backend/app/signals/)). Each finding becomes one plain-language reason with a severity word ("High risk", "Worth checking", "Minor"), so severity never relies on color. Repeated findings are grouped with a count ("3 links show one web address but really go to a different one"). For security teams, a collapsed "Technical details" section shows the parsed values behind each reason: domains, IP addresses, file extensions and authentication results only, never subjects, body text, display names or full URLs ([ADR-017](docs/architecture-decisions.md)).
+
+| Area | What is checked | Severity |
+|---|---|---|
+| **Sender authentication** | SPF, DKIM and DMARC from Gmail's own `Authentication-Results` entry (`mx.google.com`); a header the sender added is ignored | DMARC fail: high, or medium when the domain's policy is `p=none` ([ADR-018](docs/architecture-decisions.md)). SPF or DKIM fail: medium. No result: low |
+| **Sender identity** | Display name names a brand or address the sending domain doesn't belong to (`PayPal Security <x@gmail.com>`); Reply-To on a different domain | Medium |
+| **Lookalike domains** | In the sender, Reply-To and link destinations: swapped characters (`paypa1`, `rn`→`m`), one-letter typos, other alphabets and punycode, a brand inside another domain (`paypal.com.secure-login.xyz`, `paypal-support.com`), from a list of ~20 commonly impersonated brands | High for a trick (swap, typo, punycode); medium for a brand name on a domain it doesn't own or a mix of alphabets |
+| **Links** | Visible text that is an address but goes somewhere else; destinations that are IP addresses, including decimal and hex forms (`http://3232235777`); URL shorteners; `javascript:` and `data:` links | High, medium, low, high |
+| **Attachments** | Programs and scripts (`.exe`, `.js`, `.lnk`, ...), double extensions (`invoice.pdf.exe`), the right-to-left override trick in names: high. Macro Office files, disk images, HTML and SVG attachments (HTML smuggling): medium. Archives: low | By type |
+| **Hidden content** | Text or links hidden with inline styles (`display:none`, `font-size:0`, ...); short hidden preview text, normal in newsletters, is ignored | Medium with a link, low otherwise |
+| **Size** | Body trimmed to fit the request budget | Low ("too long to check fully"), so trimming is never a silent gap |
+
+**How links are read.** Every link is normalized the way a browser reads it before any check: whitespace and backslashes, the `user@host` trick (`https://paypal.com@evil.xyz` goes to `evil.xyz`), percent-encoding, punycode, numeric IP forms. Google (`google.com/url?q=`) and Outlook SafeLinks redirects are unwrapped to their real target. On any other site, web addresses carried inside a link (`?to=https://...`) also get the IP, shortener and lookalike checks, but are not trusted as the destination, since an attacker could add `?x=https://paypal.com` as a decoy. Links are parsed only: the backend never fetches or resolves an attacker's URL.
+
+**Fail safe.** If a check crashes on a crafted email, it adds "Some checks couldn't run" and never lowers the score; the error type is logged, never its message (which could contain email content).
+
+**Known blind spots.** Content hidden by stylesheets rather than inline styles. Proofpoint and Mimecast link wrappers (the target is encoded or held on their servers). A spoofed sender on a domain with DMARC policy `p=none` gets only a medium sender reason, so the verdict then rests on the other checks. Text past the size budget is not checked. The domain suffix list is bundled with the backend, so very new top-level domains may be parsed less precisely. Attachment contents are never opened, only names and types. Until the scoring model is final (Layer 5), the score is provisional: high 35, medium 15, low 5 points, summed and capped at 100.
 
 ## LLM safety
 _To be written (Layer 3)._

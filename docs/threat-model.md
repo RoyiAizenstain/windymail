@@ -29,7 +29,7 @@ Related: [Architecture Decisions](architecture-decisions.md) · [Development Lay
 |---|--------|-------|------------|-----------|
 | T1 | Prompt injection makes a malicious email look safe | Email attacker | Bounded LLM influence, delimiters, schema validation, injection as a finding | ADR-003, ADR-004 |
 | T2 | Malicious content rendered in the UI (XSS, deceptive links) | Email attacker | CardService only, LLM text as plain text | ADR-002 |
-| T3 | Evasion of deterministic signals (obfuscated links, hidden text) | Email attacker | Link normalization, hidden-text detection | Layer 2 |
+| T3 | Evasion of deterministic signals (obfuscated links, hidden text) | Email attacker | Links normalized as a browser reads them (whitespace, backslashes, `user@host`, percent-encoding, punycode, decimal/hex/octal IPs); Google and SafeLinks redirects unwrapped; addresses carried inside any link also checked; auth results trusted only from Gmail's own entry; lookalikes after character normalization; inline hidden-text detection; trimmed bodies and crashed checks reported, never silent; URLs never fetched | Layer 2, ADR-018 |
 | T4 | Oversized or malformed payload crashes or slows the backend | Email / Internet attacker | Size limits, strict schema, timeouts | ADR-011 |
 | T5 | Unauthenticated use of the backend, LLM budget drain | Internet attacker | Google ID token verification, per-user rate limiting | ADR-011 |
 | T6 | Leakage of email content through logs or reports | Insider | No bodies, subjects, or tokens in logs or reports | ADR-008, ADR-011 |
@@ -52,3 +52,8 @@ Related: [Architecture Decisions](architecture-decisions.md) · [Development Lay
 * Residual cold-start risk on the free tier if keep-warm pings are missed.
 * Masking before the LLM call is best-effort and will miss some sensitive data.
 * Retention period for the Herd Immunity store to be set if the stretch goal is built.
+* Bodies over the request budget are trimmed; padding can push a link past the cut. Reported as a low finding ("too long to check fully"), not a silent gap.
+* The domain suffix list is bundled with the backend (no outbound call per request), so very new top-level domains may be parsed less precisely until the dependency is updated.
+* Spoofing a domain whose DMARC policy is `p=none` gets only a medium sender reason (ADR-018); the verdict then rests on the link, lookalike, display-name and attachment checks.
+* Proofpoint and Mimecast link wrappers are not unwrapped (the target is encoded or held on their servers); addresses carried inside links on unknown sites are checked, but not trusted for the text-vs-destination check (decoy risk).
+* Hidden content is detected from inline styles only; content hidden by stylesheets is a blind spot, and newsletters that hide a mobile menu with links get a medium `hidden_link`.
