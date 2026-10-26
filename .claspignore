@@ -1,0 +1,3 @@
+# Never push local tests or tooling to Apps Script
+test/**
+**/*.test.js

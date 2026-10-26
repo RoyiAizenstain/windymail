@@ -25,15 +25,15 @@ README is written along the way: each layer adds its section.
 ---
 
 ## Layer 1: End-to-End Skeleton
-**Status:** In progress (Steps 1-4 done, Step 5 next)
+**Status:** In progress (Steps 1-5 done, Step 6 next)
 **Stories:** US-01, US-12 · **ADRs:** 001, 002, 006, 012
 
-- [ ] Apps Script add-on with contextual trigger on message open
-- [ ] Card shows sender, subject, placeholder score
+- [x] Apps Script add-on with contextual trigger on message open
+- [x] Card shows sender, subject, placeholder score
 - [x] FastAPI `/api/v1/analyze` returning mock JSON in the final response schema ([architecture.md](architecture.md))
 - [x] Backend deployed to Render free tier (ADR-012)
 - [x] `GET /health` endpoint (unauthenticated, fixed response) + external keep-warm ping every 5 minutes
-- [ ] Minimal OAuth scopes in `appsscript.json` (including `openid`)
+- [x] Minimal OAuth scopes in `appsscript.json` (including `openid`)
 - [ ] Verify early that `ScriptApp.getIdentityToken()` returns a token the backend can validate (ADR-011)
 - [x] Config loaded from environment, `.env.example` committed
 - [x] Public repo created; README skeleton
@@ -72,18 +72,21 @@ One step at a time; each step ends with its own check before the next starts. **
 - Check: monitor shows the service up; after 20+ idle minutes `/health` still answers fast.
 
 **Step 5: Add-on skeleton (no backend yet)**
-- [ ] **You:** enable the Apps Script API at script.google.com/home/usersettings; `npm i -g @google/clasp`; `clasp login`
-- [ ] `clasp create --type standalone --rootDir addon`; commit `.clasp.json` (script ID only, not a secret)
-- [ ] `addon/appsscript.json`: V8 runtime; `addOns.common` (name WindyMail, logo, homepage trigger); `addOns.gmail.contextualTriggers` on message open; scopes: `gmail.addons.execute`, `gmail.addons.current.message.readonly`, `script.external_request`, `openid`; `urlFetchWhitelist` limited to the Render URL
-- [ ] `addon/Code.js`: homepage card; message-open card showing sender, subject, placeholder score, built with CardService only (ADR-002)
-- [ ] `clasp push`; **You:** Deploy → Test deployments → Install in your Gmail account
+- [x] Apps Script API enabled; `clasp` 3.4.1 installed; `clasp login` as the demo account
+- [x] `clasp create --type standalone --rootDir addon`; commit `.clasp.json` (script ID only, not a secret)
+- [x] `addon/appsscript.json`: V8 runtime; `addOns.common` (name WindyMail, logo, homepage trigger); `addOns.gmail.contextualTriggers` on message open; scopes: `gmail.addons.execute`, `gmail.addons.current.message.readonly`, `script.external_request`, `openid`; `urlFetchWhitelist` limited to the Render URL
+- [x] `addon/Code.js`: homepage card; message-open card showing sender, subject, placeholder score, built with CardService only (ADR-002); email fields HTML-escaped and truncated before display (CardService text widgets interpret basic HTML)
+- [x] `clasp push`; test deployment installed in Gmail; consent screen shows exactly the four scopes; card works
 - Check: opening an email in Gmail shows the WindyMail card with the right sender and subject.
 - Note: `current.message.readonly` is requested now rather than a metadata-only scope because Layer 2 needs the body; this avoids a second consent prompt a day later.
 
 **Step 6: Connect add-on to backend**
-- [ ] Backend URL stored in Script Properties (config, not hard-coded)
-- [ ] `UrlFetchApp` POST of the request schema with an explicit error path (`muteHttpExceptions`): any failure shows a plain-language "couldn't check this email" card, never a raw error
-- [ ] Card renders the mock score and verdict returned by Render
+- [x] Backend URL in `addon/Config.js`, not Script Properties: it is public, and must match `urlFetchWhitelist` in the manifest anyway, so one visible config file is simpler and reviewable
+- [x] `UrlFetchApp` POST of the request schema with an explicit error path (`muteHttpExceptions`, no redirects): any failure shows a plain-language "couldn't check this email" card with a "Try again" button, never a raw error
+- [x] Backend response validated before rendering (T8): known fields only, score integer 0-100, verdict and mode from fixed sets; anything else → error card
+- [x] Card renders verdict with ADR-014 label + plain word + action line, score, summary, reasons; all untrusted text escaped
+- [x] `addon/test/logic.test.js`: 17 Node checks of request building, response validation, escaping; `.claspignore` keeps tests out of Apps Script
+- [ ] **You:** open an email in Gmail and confirm the card shows the mock result
 - Check: opening an email shows the mock result from the deployed backend.
 
 **Step 7: Identity token verification (ADR-011)**
