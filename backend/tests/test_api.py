@@ -14,6 +14,12 @@ def test_health_returns_fixed_status(client: TestClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_health_accepts_head(anon_client: TestClient) -> None:
+    response = anon_client.head("/health")
+    assert response.status_code == 200
+    assert response.content == b""
+
+
 def test_analyze_returns_valid_response(client: TestClient, valid_request: dict) -> None:
     response = client.post(ANALYZE, json=valid_request)
     assert response.status_code == 200

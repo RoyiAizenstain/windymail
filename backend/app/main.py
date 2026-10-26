@@ -26,9 +26,10 @@ def create_app() -> FastAPI:
         openapi_url="/openapi.json" if docs_enabled else None,
     )
 
-    @app.get("/health")
+    @app.api_route("/health", methods=["GET", "HEAD"])
     def health() -> HealthResponse:
         # Keep-warm target (ADR-012): fixed response, no version or config.
+        # HEAD too: uptime monitors (UptimeRobot) probe with HEAD by default.
         return HealthResponse(status="ok")
 
     @app.post("/api/v1/analyze")
