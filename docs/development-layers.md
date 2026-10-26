@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (Steps 1-3 done; Step 2 waits on `clasp push`)
+**Status:** In progress (Steps 1-4 done; Step 2 waits on `clasp push`)
 **Stories:** US-02, US-03, US-10
 
 - [ ] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -152,11 +152,14 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - Check: `pytest`, `ruff`; a clean email returns score 0 and "No warning signs found."
 
 **Step 4: Sender checks**
-- [ ] SPF, DKIM, DMARC from `Authentication-Results`; only the result whose authserv-id is `mx.google.com` is trusted, because a sender can add a forged `Authentication-Results` header of their own
-- [ ] Severity: `dmarc=fail` high; `spf` or `dkim` fail medium; header missing or no result low ("couldn't confirm who sent this")
-- [ ] Display name vs address: display name contains an email address or domain that differs from the real one, or names a known brand that the sending domain doesn't belong to
-- [ ] Reply-To vs From: different registered domain → medium
-- [ ] Tests per case, including a forged second `Authentication-Results` header claiming `pass`
+- [x] SPF, DKIM, DMARC from `Authentication-Results`; only the result whose authserv-id is `mx.google.com` is trusted, because a sender can add a forged `Authentication-Results` header of their own
+- [x] Severity: `dmarc=fail` high; `spf` or `dkim` fail medium; header missing or no result low ("couldn't confirm who sent this")
+- [x] Display name vs address: display name contains an email address or domain that differs from the real one, or names a known brand that the sending domain doesn't belong to
+- [x] Reply-To vs From: different registered domain → medium
+- [x] Tests per case, including a forged second `Authentication-Results` header claiming `pass` (45 new, 120 total)
+- Note: DMARC fail is reported alone (it already covers SPF and DKIM alignment, so stacking would double count); one valid DKIM signature among several is enough; `spf=neutral/none` is not a failure
+- Note: Python's strict address parser rejects `support@paypal.com <x@evil.xyz>` (the classic impersonation form), so `parse_address` falls back to the last `<…>` as the real address, as mail clients do
+- Note: brand list in `signals/brands.py` (shared with Step 5); free-mail domains never count as a brand's own (`Google Support <x@gmail.com>` is flagged)
 - Check: tests pass.
 
 **Step 5: Lookalike domains**

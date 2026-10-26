@@ -9,7 +9,7 @@ import re
 from collections.abc import Callable, Sequence
 
 from app.models import AnalyzeRequest, Reason
-from app.signals import content
+from app.signals import content, sender
 from app.signals.base import Finding
 from app.signals.messages import CATALOG
 
@@ -17,7 +17,10 @@ logger = logging.getLogger(__name__)
 
 Check = Callable[[AnalyzeRequest], list[Finding]]
 
-CHECKS: tuple[tuple[str, Check], ...] = (("content", content.check),)
+CHECKS: tuple[tuple[str, Check], ...] = (
+    ("sender", sender.check),
+    ("content", content.check),
+)
 
 # ADR-017: only lowercase domains, IPs, extensions and auth results reach the response.
 _SAFE_VALUE = re.compile(r"[a-z0-9.:=_\-]{1,253}")
@@ -55,7 +58,9 @@ def to_reasons(findings: list[Finding]) -> list[Reason]:
                 id=finding_id,
                 category=message.category,
                 severity=message.severity,
-                text=message.text if count == 1 else message.text_many.format(count=count),
+                text=message.text_many.format(count=count)
+                if count > 1 and message.text_many
+                else message.text,
                 details=f"{message.details}: {', '.join(values)}" if values else message.details,
             )
         )

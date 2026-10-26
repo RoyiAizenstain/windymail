@@ -8,9 +8,17 @@ from app.signals.base import Finding
 from app.signals.engine import run_checks, summarize, to_reasons
 from app.signals.messages import CATALOG, Message
 
+PASSING_AUTH = "mx.google.com; dkim=pass header.i=@example.com; spf=pass; dmarc=pass"
+
 
 def make_request(**overrides: object) -> AnalyzeRequest:
-    fields = {"message_id": "m", "from": "a@example.com", "subject": "s", "body_text": "hi"}
+    fields = {
+        "message_id": "m",
+        "from": "a@example.com",
+        "subject": "s",
+        "body_text": "hi",
+        "auth_results": PASSING_AUTH,
+    }
     return AnalyzeRequest.model_validate({**fields, **overrides})
 
 
@@ -74,7 +82,7 @@ def reason(severity: str) -> Reason:
 
 
 def test_reasons_sorted_most_severe_first(monkeypatch: pytest.MonkeyPatch) -> None:
-    high = Message(category="link", severity="high", text="h", text_many="h", details="d")
+    high = Message(category="link", severity="high", text="h", details="d")
     monkeypatch.setitem(CATALOG, "test_high", high)
     reasons = to_reasons([Finding("check_failed"), Finding("test_high")])
     assert [r.severity for r in reasons] == ["high", "low"]

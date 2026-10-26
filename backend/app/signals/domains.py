@@ -4,12 +4,16 @@ The registered domain comes from tldextract's bundled Public Suffix List snapsho
 no network call per request, and no attacker-influenced lookups (ADR-016).
 """
 
+import re
 from email.utils import parseaddr
 
 import idna
 import tldextract
 
 _extract = tldextract.TLDExtract(suffix_list_urls=(), cache_dir=None)
+
+# `Name <user@host>`: the address is the last bracketed part, as mail clients read it.
+_ANGLE_ADDRESS = re.compile(r"^(?P<name>.*)<(?P<address>[^<>]*)>\s*$", re.DOTALL)
 
 
 def normalize_host(host: str) -> str | None:
@@ -37,5 +41,11 @@ def registered_domain(host: str) -> str | None:
 def parse_address(value: str | None) -> tuple[str, str | None]:
     """Splits `Name <user@host>` into the display name and the normalized host."""
     name, address = parseaddr(value or "")
+    if not address:
+        # The strict parser rejects names like `support@paypal.com <x@evil.xyz>`,
+        # which is exactly the impersonation pattern to catch.
+        match = _ANGLE_ADDRESS.match(value or "")
+        if match:
+            name, address = match["name"].strip().strip('"'), match["address"].strip()
     _, at, host = address.rpartition("@")
     return name.strip(), normalize_host(host) if at else None

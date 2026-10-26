@@ -31,6 +31,9 @@ def test_normalize_rejects_invalid_and_overlong() -> None:
         ('"Bob, IT" <bob@corp.example>', "Bob, IT", "corp.example"),
         ("not an address", "", None),
         (None, "", None),
+        ("support@paypal.com <x@evil.xyz>", "support@paypal.com", "evil.xyz"),
+        # Two bracketed parts: the last one is the real address, the rest is the name.
+        ('"PayPal" <a@b.com> <x@evil.xyz>', 'PayPal" <a@b.com>', "evil.xyz"),
     ],
 )
 def test_parse_address(value: str | None, name: str, host: str | None) -> None:
