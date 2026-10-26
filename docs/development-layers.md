@@ -25,17 +25,17 @@ README is written along the way: each layer adds its section.
 ---
 
 ## Layer 1: End-to-End Skeleton
-**Status:** In progress (Step 1 done, Step 2 next)
+**Status:** In progress (Steps 1-2 done, Step 3 next)
 **Stories:** US-01, US-12 · **ADRs:** 001, 002, 006, 012
 
 - [ ] Apps Script add-on with contextual trigger on message open
 - [ ] Card shows sender, subject, placeholder score
-- [ ] FastAPI `/api/v1/analyze` returning mock JSON in the final response schema ([architecture.md](architecture.md))
+- [x] FastAPI `/api/v1/analyze` returning mock JSON in the final response schema ([architecture.md](architecture.md))
 - [ ] Backend deployed to Render free tier (ADR-012)
 - [ ] `GET /health` endpoint (unauthenticated, fixed response) + external keep-warm ping every 10 minutes
 - [ ] Minimal OAuth scopes in `appsscript.json` (including `openid`)
 - [ ] Verify early that `ScriptApp.getIdentityToken()` returns a token the backend can validate (ADR-011)
-- [ ] Config loaded from environment, `.env.example` committed
+- [x] Config loaded from environment, `.env.example` committed
 - [x] Public repo created; README skeleton
 
 **Done when:** opening any email shows the mock result from the deployed backend.
@@ -51,11 +51,12 @@ One step at a time; each step ends with its own check before the next starts. **
 - Check: repo visible on GitHub, no secrets in it.
 
 **Step 2: Backend skeleton (local)**
-- [ ] `backend/app/main.py`: FastAPI app, `GET /health` → `{"status": "ok"}`, `POST /api/v1/analyze` → fixed mock in the final response schema
-- [ ] `backend/app/models.py`: Pydantic v2 request and response models per [architecture.md](architecture.md), `extra="forbid"`
-- [ ] `backend/app/config.py`: settings read from environment only; fail fast on missing required values
-- [ ] `backend/.env.example` with every variable name, no values; `requirements.txt` pinned; `pyproject.toml` with `ruff` config
-- [ ] Tests: `/health` returns ok; `/analyze` accepts a valid request, rejects unknown fields (422), response matches schema
+- [x] `backend/app/main.py`: FastAPI app, `GET /health` → `{"status": "ok"}`, `POST /api/v1/analyze` → fixed mock in the final response schema; `/docs` and `/openapi.json` off unless `ENABLE_API_DOCS=true`
+- [x] `backend/app/models.py`: Pydantic v2 request and response models per [architecture.md](architecture.md), `extra="forbid"`, length bounds on all strings and lists; `mode` field added to the response (ADR-015)
+- [x] `backend/app/config.py`: settings read from environment only; fail fast on invalid values
+- [x] `backend/app/verdict.py`: score → verdict thresholds (0-29 / 30-69 / 70-100)
+- [x] `backend/.env.example` with every variable name, no values; `requirements.txt` and `requirements-dev.txt` pinned; `pyproject.toml` with `ruff` config (incl. bandit `S` rules)
+- [x] Tests (22): `/health` ok; `/analyze` valid request, schema-valid response, no echo of request content; 422 on unknown, missing, overlong, and negative fields; organization vs personal mode; docs disabled by default; verdict boundaries
 - Check: `uvicorn` runs locally, `pytest` and `ruff check` pass.
 
 **Step 3: Deploy to Render**
