@@ -136,6 +136,8 @@ def parse(response: anthropic.types.Message) -> LlmVerdict | None:
 def classify(request: AnalyzeRequest) -> LlmVerdict | None:
     settings = get_settings()
     if not settings.llm_enabled or not settings.anthropic_api_key:
+        reason = "disabled" if not settings.llm_enabled else "no_key"
+        logger.info("llm: outcome=skipped:%s", reason)
         return None
 
     started = time.monotonic()

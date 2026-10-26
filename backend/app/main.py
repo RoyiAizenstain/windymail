@@ -5,6 +5,7 @@ provisionally (ADR-010, ADR-019). Reasons use fixed wording; only normalized val
 are echoed (ADR-017).
 """
 
+import logging
 from typing import Annotated
 
 from fastapi import Depends, FastAPI
@@ -15,7 +16,19 @@ from app.config import get_settings
 from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse
 
 
+def _configure_logging() -> None:
+    # Uvicorn configures only its own loggers; without this, our INFO lines (the LLM
+    # outcome and latency) are dropped. Content is never logged (ADR-011).
+    logger = logging.getLogger("app")
+    if not logger.handlers:
+        handler = logging.StreamHandler()
+        handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
+        logger.addHandler(handler)
+    logger.setLevel(logging.INFO)
+
+
 def create_app() -> FastAPI:
+    _configure_logging()
     settings = get_settings()
     docs_enabled = settings.enable_api_docs
     app = FastAPI(
