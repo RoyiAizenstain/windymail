@@ -1,4 +1,5 @@
 # Render Blueprint for the WindyMail backend (ADR-012: free tier + keep-warm ping).
+# Mirrors the live service "windymail-backend" (https://windymail-backend.onrender.com).
 # Secrets are never set here; add them in the Render dashboard (Environment tab).
 services:
   - type: web
@@ -6,9 +7,9 @@ services:
     runtime: python
     plan: free
     region: frankfurt
-    rootDir: backend
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    branch: main
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
       - key: PYTHON_VERSION

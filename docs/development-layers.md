@@ -25,13 +25,13 @@ README is written along the way: each layer adds its section.
 ---
 
 ## Layer 1: End-to-End Skeleton
-**Status:** In progress (Steps 1-2 done, Step 3 next)
+**Status:** In progress (Steps 1-3 done, Step 4 next)
 **Stories:** US-01, US-12 · **ADRs:** 001, 002, 006, 012
 
 - [ ] Apps Script add-on with contextual trigger on message open
 - [ ] Card shows sender, subject, placeholder score
 - [x] FastAPI `/api/v1/analyze` returning mock JSON in the final response schema ([architecture.md](architecture.md))
-- [ ] Backend deployed to Render free tier (ADR-012)
+- [x] Backend deployed to Render free tier (ADR-012)
 - [ ] `GET /health` endpoint (unauthenticated, fixed response) + external keep-warm ping every 10 minutes
 - [ ] Minimal OAuth scopes in `appsscript.json` (including `openid`)
 - [ ] Verify early that `ScriptApp.getIdentityToken()` returns a token the backend can validate (ADR-011)
@@ -60,8 +60,11 @@ One step at a time; each step ends with its own check before the next starts. **
 - Check: `uvicorn` runs locally, `pytest` and `ruff check` pass.
 
 **Step 3: Deploy to Render**
-- [ ] `render.yaml` (root dir `backend`, Python 3.12 pinned, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, free plan)
-- [ ] **You:** create a free Render account, connect the GitHub repo, create the service from `render.yaml`, set env vars in the Render dashboard
+- [x] `render.yaml` mirroring the live service (Python 3.12.10 pinned, `cd backend && uvicorn ...`, free plan, Frankfurt)
+- [x] Service `windymail-backend` created in the existing Render workspace via the Render connector; auto-deploy on push to `main`
+- [x] Live at https://windymail-backend.onrender.com: `/health` 200, `/analyze` mock 200, unknown field 422, `/docs` 404, HTTP → HTTPS 301
+- [ ] **You:** in the Render dashboard, set Settings → Health Check Path to `/health` (the connector cannot set it)
+- Note: for the first ~2 minutes after creation about half of requests got `x-render-routing: no-server` 404s from Render's edge; it cleared on its own (80/80 OK afterwards).
 - Check: `https://<service>.onrender.com/health` returns ok over HTTPS.
 
 **Step 4: Keep-warm ping**
