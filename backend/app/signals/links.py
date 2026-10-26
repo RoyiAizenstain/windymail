@@ -77,6 +77,8 @@ def destination(href: str) -> Destination | None:
     ip = _ip(host)
     if ip:
         return Destination(scheme, ip, is_ip=True)
+    if _ends_in_number(host):
+        return None  # browsers must read it as IPv4; not a valid one, so not a URL
     normalized = normalize_host(host)
     return Destination(scheme, normalized) if normalized else None
 
@@ -88,6 +90,11 @@ def _ip(host: str) -> str | None:
         except ValueError:
             return None
     return _ipv4(host)
+
+
+def _ends_in_number(host: str) -> bool:
+    last = host.rsplit(".", 1)[-1]
+    return last.isascii() and (last.isdigit() or last.lower().startswith("0x"))
 
 
 def _ipv4(host: str) -> str | None:

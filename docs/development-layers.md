@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (Steps 1-5 done; Step 6 code in, its tests not yet written; Step 2 waits on `clasp push`)
+**Status:** In progress (Steps 1-6 done; Step 2 waits on `clasp push`)
 **Stories:** US-02, US-03, US-10
 
 - [ ] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -173,12 +173,15 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - Check: tests pass.
 
 **Step 6: Link checks**
-- [ ] Links from `<a href>` in `body_html` (BeautifulSoup with the standard-library `html.parser`) and URLs found in `body_text`; capped at the first 200
-- [ ] Normalization before any check (T3): trim, lowercase host, percent-decode, IDNA, backslashes, and the `user@host` trick (`https://paypal.com@evil.xyz` goes to `evil.xyz`)
-- [ ] Link text vs destination: visible text looks like a domain or URL and its registered domain differs from the real destination → high
-- [ ] Destination is an IP address, including decimal and hex forms (`http://3232235777`) → medium; known URL shortener → low; `javascript:` or `data:` link → high
-- [ ] URLs are never fetched or resolved: no network calls on attacker-supplied URLs (SSRF)
-- [ ] Tests per case, including obfuscated forms
+- [x] Links from `<a href>` in `body_html` (BeautifulSoup with the standard-library `html.parser`) and URLs found in `body_text`; capped at the first 200
+- [x] Normalization before any check (T3): trim, lowercase host, percent-decode, IDNA, backslashes, and the `user@host` trick (`https://paypal.com@evil.xyz` goes to `evil.xyz`)
+- [x] Link text vs destination: visible text looks like a domain or URL and its registered domain differs from the real destination → high
+- [x] Destination is an IP address, including decimal and hex forms (`http://3232235777`) → medium; known URL shortener → low; `javascript:` or `data:` link → high
+- [x] URLs are never fetched or resolved: no network calls on attacker-supplied URLs (SSRF)
+- [x] Tests per case, including obfuscated forms (47 new, 204 total)
+- [x] Link destinations also go through the Step 5 lookalike check (`link_lookalike`, `link_brand_in_domain`)
+- Note: newsletter services route every link through click-tracking domains (`sendgrid.net`, `list-manage.com`, ...), so the text-vs-destination check skips a short list of them; all other checks still run on those links
+- Note: whitespace handled as browsers do (WHATWG): ends trimmed, tabs and newlines removed anywhere, a space inside the host makes the URL invalid; a host ending in a number that is not a valid IPv4 is invalid too
 - Check: tests pass.
 
 **Step 7: Attachments and hidden text**
