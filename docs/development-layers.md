@@ -124,6 +124,73 @@ One step at a time; each step ends with its own check before the next starts. **
 
 **Done when:** a phishing test email shows concrete, correct reasons.
 
+### Layer 2 step-by-step plan
+Same rules as Layer 1: one step at a time, each ends with its own check. **You** marks actions only the account owner can do. **Decision** marks a choice to confirm before the step starts.
+
+**Step 1: Decisions before code**
+- [ ] **Decision:** provisional score until ADR-010 closes. Proposal: points per finding by severity (high 35, medium 15, low 5), summed and clamped to 0-100, mapped through `verdict.py`. Without it, real reasons would sit next to the mock 42. Likely to become the deterministic half of ADR-010.
+- [ ] **Decision:** echo rule. Today nothing from the request is echoed in the response, but useful reasons need concrete values ("the link says paypal.com but goes to bit.ly"). Proposal: `details` may include values the backend has parsed and normalized (domains, IPs, file extensions, auth results), restricted to `[a-z0-9.-]`-style character sets and length-capped; never subjects, body text, display names, or full URLs. Update architecture.md and the no-echo test to match.
+- Check: both recorded in architecture-decisions.md.
+
+**Step 2: Add-on sends the whole message**
+- [ ] `buildAnalyzeRequest`: `auth_results` from `message.getHeader('Authentication-Results')`; `body_text` from `getPlainBody()`; `body_html` from `getBody()`; attachments as metadata only (`getName`, `getContentType`, `getSize`), contents never sent
+- [ ] Size budget: serialized payload kept under 190 KB (measured in UTF-8 bytes, not characters), trimming `body_html` first, then `body_text`; new request field `truncated: bool` so the backend knows (schema, models.py and architecture.md updated together)
+- [ ] `logic.test.js`: request building with body, attachments, oversized body trimmed to the budget, `truncated` set
+- Check: a long newsletter still gets a card; the request on Render stays under 200 KB.
+- Note: truncation is an evasion path (padding pushes a link past the cut). It becomes a finding ("Too long to check fully", low), not a silent gap, and is listed under Known Limitations.
+
+**Step 3: Signal engine skeleton**
+- [ ] `backend/app/signals/`: one module per area (`sender.py`, `lookalike.py`, `links.py`, `attachments.py`, `hidden.py`); each exposes `check(request) -> list[Reason]`
+- [ ] `engine.py`: runs every check, removes duplicates, one reason per finding type with a count ("3 links go somewhere other than they say"), stable reason IDs
+- [ ] Fail safe: a check that raises is logged by name and error type only, and adds a low reason "Some checks couldn't run"; it never drops the request and never lowers the score (a crafted email that crashes the link checker must not look cleaner)
+- [ ] Shared helpers: address parsing with `email.utils`; registered domain with `tldextract` using its **bundled** suffix list (`suffix_list_urls=()`), so the backend makes no outbound call per request
+- [ ] Plain-language text for every reason kept in one place (`signals/messages.py`), with the technical detail beside it
+- [ ] `/analyze` returns engine reasons and the provisional score; mock removed
+- Check: `pytest`, `ruff`; a clean email returns score 0 and "No warning signs found."
+
+**Step 4: Sender checks**
+- [ ] SPF, DKIM, DMARC from `Authentication-Results`; only the result whose authserv-id is `mx.google.com` is trusted, because a sender can add a forged `Authentication-Results` header of their own
+- [ ] Severity: `dmarc=fail` high; `spf` or `dkim` fail medium; header missing or no result low ("couldn't confirm who sent this")
+- [ ] Display name vs address: display name contains an email address or domain that differs from the real one, or names a known brand that the sending domain doesn't belong to
+- [ ] Reply-To vs From: different registered domain → medium
+- [ ] Tests per case, including a forged second `Authentication-Results` header claiming `pass`
+- Check: tests pass.
+
+**Step 5: Lookalike domains**
+- [ ] Short brand list in code (about 20: PayPal, Microsoft, Google, Apple, Amazon, Netflix, DHL, FedEx, LinkedIn, DocuSign, Dropbox, Meta, local banks, Upwind)
+- [ ] Flags: punycode (`xn--`) domains; character swaps after normalization (`0`→`o`, `1`→`l`, `rn`→`m`, `vv`→`w`); edit distance 1 to a brand name (2 for names of 8+ letters); brand placed in a subdomain or hyphenated label of another domain (`paypal.com.secure-login.xyz`, `paypal-support.com`); an exact brand domain is never flagged
+- [ ] Applied to From, Reply-To and every link destination
+- [ ] Tests: each pattern flagged; real brand domains and common unrelated domains not flagged
+- Check: tests pass.
+
+**Step 6: Link checks**
+- [ ] Links from `<a href>` in `body_html` (BeautifulSoup with the standard-library `html.parser`) and URLs found in `body_text`; capped at the first 200
+- [ ] Normalization before any check (T3): trim, lowercase host, percent-decode, IDNA, backslashes, and the `user@host` trick (`https://paypal.com@evil.xyz` goes to `evil.xyz`)
+- [ ] Link text vs destination: visible text looks like a domain or URL and its registered domain differs from the real destination → high
+- [ ] Destination is an IP address, including decimal and hex forms (`http://3232235777`) → medium; known URL shortener → low; `javascript:` or `data:` link → high
+- [ ] URLs are never fetched or resolved: no network calls on attacker-supplied URLs (SSRF)
+- [ ] Tests per case, including obfuscated forms
+- Check: tests pass.
+
+**Step 7: Attachments and hidden text**
+- [ ] Attachment extensions: executables and scripts (`.exe .scr .js .vbs .bat .cmd .ps1 .hta .msi .lnk .jar`) high; double extension (`invoice.pdf.exe`) and right-to-left override character in the name high; macro Office files, disk images (`.iso .img .vhd`), HTML/SVG attachments (HTML smuggling) medium; archives low
+- [ ] Hidden text in HTML via inline styles (`display:none`, `visibility:hidden`, `font-size:0`, `opacity:0`, zero height with overflow hidden): low when it is a substantial block, medium when it holds a link. Short hidden preview text is normal in newsletters and is ignored
+- [ ] Hidden text is reported, not interpreted; injection inside it is a Layer 3 concern
+- [ ] Tests per case, including a newsletter preheader that must not be flagged
+- Check: tests pass.
+
+**Step 8: Card and live test**
+- [ ] Each reason shows a severity word ("High risk", "Worth checking", "Minor") before its text, so severity never relies on color (ADR-015)
+- [ ] Collapsible "Technical details" section (US-10): auth results and each reason's `details`, collapsed by default
+- [ ] Deploy; **You:** send test emails to the demo account: a clean personal email; a phishing-style one (display name "PayPal Security", Reply-To on another domain, link text `paypal.com` pointing at a shortener, `.html` attachment); a long newsletter
+- [ ] JSON copies of the same cases in `backend/tests/fixtures/` as end-to-end API tests
+- Check: the phishing email shows concrete, correct reasons in Gmail; the clean email shows Safe; the newsletter is not flagged for hidden text.
+
+**Step 9: Close the layer**
+- [ ] README: signals section (what is checked, why, and known blind spots)
+- [ ] threat-model.md: T3 mitigations filled in; truncation and bundled suffix list added to Known Limitations
+- [ ] Tick the boxes above, set Layer 2 status to Done
+
 ---
 
 ## Layer 3: LLM Integration
