@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (Step 1 done)
+**Status:** In progress (Steps 1-3 done; Step 2 waits on `clasp push`)
 **Stories:** US-02, US-03, US-10
 
 - [ ] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -141,12 +141,14 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - Note: truncation is an evasion path (padding pushes a link past the cut). It becomes a finding ("Too long to check fully", low), not a silent gap, and is listed under Known Limitations.
 
 **Step 3: Signal engine skeleton**
-- [ ] `backend/app/signals/`: one module per area (`sender.py`, `lookalike.py`, `links.py`, `attachments.py`, `hidden.py`); each exposes `check(request) -> list[Reason]`
-- [ ] `engine.py`: runs every check, removes duplicates, one reason per finding type with a count ("3 links go somewhere other than they say"), stable reason IDs
-- [ ] Fail safe: a check that raises is logged by name and error type only, and adds a low reason "Some checks couldn't run"; it never drops the request and never lowers the score (a crafted email that crashes the link checker must not look cleaner)
-- [ ] Shared helpers: address parsing with `email.utils`; registered domain with `tldextract` using its **bundled** suffix list (`suffix_list_urls=()`), so the backend makes no outbound call per request
-- [ ] Plain-language text for every reason kept in one place (`signals/messages.py`), with the technical detail beside it
-- [ ] `/analyze` returns engine reasons and the provisional score; mock removed
+- [x] `backend/app/signals/`: one module per area (`sender.py`, `lookalike.py`, `links.py`, `attachments.py`, `hidden.py`); each exposes `check(request) -> list[Reason]`
+- [x] `engine.py`: runs every check, removes duplicates, one reason per finding type with a count ("3 links go somewhere other than they say"), stable reason IDs
+- [x] Fail safe: a check that raises is logged by name and error type only, and adds a low reason "Some checks couldn't run"; it never drops the request and never lowers the score (a crafted email that crashes the link checker must not look cleaner)
+- [x] Shared helpers: address parsing with `email.utils`; registered domain with `tldextract` using its **bundled** suffix list (`suffix_list_urls=()`), so the backend makes no outbound call per request
+- [x] Plain-language text for every reason kept in one place (`signals/messages.py`), with the technical detail beside it
+- [x] `/analyze` returns engine reasons and the provisional score; mock removed
+- [x] Tests (34 new, 75 total): failing check degrades and its message never reaches the logs; grouping with counts; unsafe values dropped (HTML, uppercase, spaces, full URLs, RTL override); severity order; provisional score and clamp; domain and address parsing incl. Cyrillic lookalike → punycode
+- Note: `signals/messages.py` is the catalog the plan called for; `app/scoring.py` holds the provisional score
 - Check: `pytest`, `ruff`; a clean email returns score 0 and "No warning signs found."
 
 **Step 4: Sender checks**

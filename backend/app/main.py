@@ -1,7 +1,7 @@
 """WindyMail backend: FastAPI entry point.
 
-Layer 1: /analyze returns a fixed mock in the final response schema. Nothing from
-the request is echoed back.
+/analyze runs the deterministic checks (Layer 2) and scores them provisionally
+(ADR-010). Reasons use fixed wording; only normalized values are echoed (ADR-017).
 """
 
 from typing import Annotated
@@ -10,10 +10,10 @@ from fastapi import Depends, FastAPI
 
 from app.auth import require_user
 from app.config import get_settings
-from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse, Reason
+from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse
+from app.scoring import provisional_score
+from app.signals.engine import run_checks, summarize
 from app.verdict import verdict_for
-
-MOCK_SCORE = 42
 
 
 def create_app() -> FastAPI:
@@ -36,19 +36,13 @@ def create_app() -> FastAPI:
     def analyze(
         request: AnalyzeRequest, user_id: Annotated[str, Depends(require_user)]
     ) -> AnalyzeResponse:
+        reasons = run_checks(request)
+        score = provisional_score(reasons)
         return AnalyzeResponse(
-            score=MOCK_SCORE,
-            verdict=verdict_for(MOCK_SCORE),
-            summary="Mock result: the connection works, real analysis is not built yet.",
-            reasons=[
-                Reason(
-                    id="mock_reason",
-                    category="content",
-                    severity="low",
-                    text="This is a placeholder reason from the WindyMail backend.",
-                    details="Layer 1 mock. No analysis was performed.",
-                )
-            ],
+            score=score,
+            verdict=verdict_for(score),
+            summary=summarize(reasons),
+            reasons=reasons,
             manipulation=[],
             mode=get_settings().mode,
         )
