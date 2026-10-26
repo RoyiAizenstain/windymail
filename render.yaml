@@ -19,3 +19,10 @@ services:
       # Required: expected "aud" of the add-on's ID token (ADR-011). Set in the dashboard.
       - key: GOOGLE_CLIENT_ID
         sync: false
+      # LLM step (ADR-019). Set in the dashboard, with a spend limit on the key in the
+      # Anthropic Console. Without it the backend runs on its rules only (partial).
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      # Set to false to turn the LLM step off without a deploy.
+      - key: LLM_ENABLED
+        value: "true"
