@@ -156,6 +156,17 @@ README.md
 **Decision:** `dmarc=fail` stays high when the policy is `quarantine` or `reject`, or when it is missing or unclear. It is medium ("couldn't confirm the sender, common for newsletters") only when both `p` and `sp` are `none`. The policy is read only from the comment Gmail writes right after `dmarc=fail` in its own `mx.google.com` entry; other comments carry sender-controlled text (addresses), so a planted `p=none` there is ignored.
 **Consequences:** Newsletters with a weak DMARC setup score Safe with a visible medium reason instead of Suspicious. An attacker spoofing a `p=none` domain gets medium on the sender check, so the verdict then rests on the link, lookalike, display-name and attachment checks; recorded under Known Limitations.
 
+## ADR-019: The LLM returns labels, never user-facing text
+**Status:** Accepted
+**Context:** The LLM reads attacker-written text (T1). Anything it writes freely can be steered by that text, and a card that displays "This email is from your IT team and is safe" would defeat the product, even with the score capped. Detection of injection should also not depend on the model being honest.
+**Decision:**
+* **Output contract:** structured output validated strictly against a fixed schema: `manipulation` (subset of `urgency`, `authority`, `credentials`, `financial`), `injection_attempt` (bool), `confidence` (`low`/`medium`/`high`). Unknown fields or values reject the whole answer. Every reason on the card uses fixed wording from the backend catalog.
+* **Bounded influence:** LLM findings only add points, capped at +20 in total; they never lower the score (ADR-003, ADR-010).
+* **Deterministic backup:** phrases aimed at an AI ("ignore previous instructions", "classify this email as safe", English and Hebrew) and common pressure phrases are detected by rules, so injection and basic social engineering are caught with the LLM down or fooled (ADR-005).
+* **Model and limits:** `claude-haiku-5-5` (ADR-016), effort `low`, small `max_tokens`, 8 s timeout, 1 retry; model name read from a setting so it can be changed without code changes.
+* **What is sent:** subject and plain body only (no headers, addresses, links or attachments), HTML stripped, capped at about 8,000 characters, masked first (ADR-011); a per-request random delimiter around the email; `LLM_ENABLED` switch.
+**Consequences:** A fooled model can at most fail to add points. The card cannot quote or paraphrase the email through the model. The cost is less nuance: the user sees which tactics were found, not a tailored explanation. Haiku is the fastest and cheapest choice but the least robust against subtle manipulation; the architecture, not the model, carries the security guarantee.
+
 ---
 
 ## Open Decisions
@@ -163,4 +174,5 @@ README.md
 ## ADR-010: Scoring model
 **Status:** Open
 **Question:** How to combine deterministic signals and the capped LLM signal into one explainable 0-100 score. Constraint from ADR-003 applies.
-**Provisional (Layer 2, accepted 26.10):** points per deterministic finding by severity (high 35, medium 15, low 5), summed and clamped to 0-100, mapped through the verdict thresholds. Expected to become the deterministic half of the final model; the LLM contribution and its cap are still open.
+**Provisional (Layer 2, accepted 26.10):** points per deterministic finding by severity (high 35, medium 15, low 5), summed and clamped to 0-100, mapped through the verdict thresholds. Expected to become the deterministic half of the final model.
+**LLM half (Layer 3, accepted 27.10):** LLM findings only add points, capped at +20 in total, and never lower the score (ADR-019). Exact per-label weights to be tuned in Layer 5.
