@@ -24,6 +24,9 @@ var VERDICT_UI = {
   },
 };
 
+/** Severity in words, so it never relies on color (ADR-015). */
+var SEVERITY_WORDS = { high: 'High risk', medium: 'Worth checking', low: 'Minor' };
+
 var PARTIAL_LINE = "🌫️ Limited visibility: some checks couldn't run. Verdict based on technical signals only.";
 
 function buildHomepageCard() {
@@ -56,7 +59,7 @@ function buildResultCard(message, result) {
     reasons.addWidget(CardService.newTextParagraph().setText('No warning signs found.'));
   }
   result.reasons.forEach(function (reason) {
-    reasons.addWidget(CardService.newTextParagraph().setText('• ' + toPlainText(reason.text)));
+    reasons.addWidget(CardService.newTextParagraph().setText(reasonLine(reason)));
   });
 
   var email = CardService.newCardSection()
@@ -64,7 +67,30 @@ function buildResultCard(message, result) {
     .addWidget(decorated('From', message.getFrom()))
     .addWidget(decorated('Subject', message.getSubject() || '(no subject)'));
 
-  return newCard('Email check').addSection(verdict).addSection(reasons).addSection(email).build();
+  var card = newCard('Email check').addSection(verdict).addSection(reasons).addSection(email);
+  if (result.reasons.length > 0) card.addSection(buildDetailsSection(result.reasons));
+  return card.build();
+}
+
+/** "<b>High risk:</b> text". The severity word comes from a fixed map, never the backend. */
+function reasonLine(reason) {
+  var word = SEVERITY_WORDS[reason.severity];
+  return (word ? '<b>' + word + ':</b> ' : '• ') + toPlainText(reason.text);
+}
+
+/** Collapsed analyst view (US-10): what each check found, in technical terms. */
+function buildDetailsSection(reasons) {
+  var section = CardService.newCardSection()
+    .setHeader('Technical details')
+    .setCollapsible(true)
+    .setNumUncollapsibleWidgets(1)
+    .addWidget(CardService.newTextParagraph().setText('For security teams: what each check found.'));
+  reasons.forEach(function (reason) {
+    if (reason.details) {
+      section.addWidget(CardService.newTextParagraph().setText('• ' + toPlainText(reason.details)));
+    }
+  });
+  return section;
 }
 
 /** Shown when the backend is unreachable, slow, or returns something invalid. */

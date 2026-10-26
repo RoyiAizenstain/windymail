@@ -1,0 +1,31 @@
+{
+  "about": "The Step 8 test email: PayPal display name from a lookalike domain, Reply-To elsewhere, link text paypal.com pointing at a shortener, HTML attachment.",
+  "request": {
+    "message_id": "phish-1",
+    "from": "PayPal Security <service@paypa1-secure.com>",
+    "reply_to": "Billing <billing@collect-desk.net>",
+    "subject": "Your account is limited",
+    "auth_results": "mx.google.com; dkim=pass header.i=@paypa1-secure.com; spf=pass smtp.mailfrom=service@paypa1-secure.com; dmarc=pass header.from=paypa1-secure.com",
+    "body_text": "Your account has been limited. Confirm your details at paypal.com within 24 hours.",
+    "body_html": "<p>Your account has been limited.</p><p>Confirm your details at <a href=\"https://bit.ly/3xYz9\">www.paypal.com</a> within 24 hours.</p>",
+    "attachments": [
+      {
+        "filename": "Account-Review.html",
+        "mime_type": "text/html",
+        "size_bytes": 5120
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "malicious",
+    "reasons": [
+      "sender_lookalike",
+      "link_text_mismatch",
+      "display_name_brand",
+      "reply_to_mismatch",
+      "attachment_web_page",
+      "link_shortener"
+    ]
+  }
+}

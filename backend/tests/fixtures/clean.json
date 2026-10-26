@@ -1,0 +1,24 @@
+{
+  "about": "A personal email from a friend: everything passes, nothing risky.",
+  "request": {
+    "message_id": "clean-1",
+    "from": "Dana Levi <dana.levi@gmail.com>",
+    "reply_to": null,
+    "subject": "Dinner on Friday?",
+    "auth_results": "mx.google.com; dkim=pass header.i=@gmail.com header.s=20230601; spf=pass (google.com: domain of friend@gmail.com designates 209.85.220.41 as permitted sender) smtp.mailfrom=friend@gmail.com; dmarc=pass (p=NONE sp=QUARANTINE dis=NONE) header.from=gmail.com",
+    "body_text": "Hi! Are you free for dinner on Friday? Here is the place: https://www.tripadvisor.com/Restaurant",
+    "body_html": "<div dir=\"ltr\">Hi! Are you free for dinner on Friday? Here is the place: <a href=\"https://www.tripadvisor.com/Restaurant\">https://www.tripadvisor.com/Restaurant</a></div>",
+    "attachments": [
+      {
+        "filename": "menu.pdf",
+        "mime_type": "application/pdf",
+        "size_bytes": 48213
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe",
+    "reasons": []
+  }
+}

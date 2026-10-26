@@ -28,6 +28,10 @@ t('text trimmed when html is not enough', () => { const q = ctx.buildAnalyzeRequ
 t('budget counts multibyte and escaped characters', () => { for (const ch of ['ש','😀','"','<']) { const q = ctx.buildAnalyzeRequest(mkMsg({text:ch.repeat(60000), html:ch.repeat(60000)})); assert.ok(bytes(q) <= 190000, ch); } });
 t('never splits a surrogate pair', () => { const q = ctx.buildAnalyzeRequest(mkMsg({text:'😀'.repeat(50000), html:'😀'.repeat(50000)})); for (const f of ['body_text','body_html']) if (q[f]) assert.ok(!/[\ud800-\udbff]$/.test(q[f])); assert.ok(bytes(q) <= 190000); });
 t('utf8Length matches Buffer', () => { for (const s of ['abc','ש','😀x','é€']) assert.equal(ctx.utf8Length(s), Buffer.byteLength(s,'utf8')); });
+t('known severity kept, unknown dropped to null', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a',severity:'high'},{text:'b',severity:'<b>evil</b>'}]}); assert.equal(r.reasons[0].severity,'high'); assert.equal(r.reasons[1].severity,null); });
+t('reason line has severity word', () => assert.equal(ctx.reasonLine({text:'Bad link', severity:'high'}), '<b>High risk:</b> Bad link'));
+t('reason line escapes text', () => assert.equal(ctx.reasonLine({text:'<a href=x>', severity:'low'}), '<b>Minor:</b> &lt;a href=x&gt;'));
+t('reason line without severity', () => assert.equal(ctx.reasonLine({text:'x', severity:null}), '• x'));
 t('escapes html', () => assert.equal(ctx.toPlainText('<a href="x">pay</a> & co'), '&lt;a href=&quot;x&quot;&gt;pay&lt;/a&gt; &amp; co'));
 t('truncates display', () => assert.equal(ctx.toPlainText('x'.repeat(500)).length, 201));
 t('null safe', () => assert.equal(ctx.toPlainText(null), ''));

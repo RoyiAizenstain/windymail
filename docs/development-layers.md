@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (Steps 1-7 done; Step 2 waits on `clasp push`)
+**Status:** In progress (Steps 1-7 done; Step 8 code done, live Gmail test waits on `clasp push` and test emails)
 **Stories:** US-02, US-03, US-10
 
 - [ ] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -194,10 +194,10 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - Check: tests pass.
 
 **Step 8: Card and live test**
-- [ ] Each reason shows a severity word ("High risk", "Worth checking", "Minor") before its text, so severity never relies on color (ADR-015)
-- [ ] Collapsible "Technical details" section (US-10): auth results and each reason's `details`, collapsed by default
+- [x] Each reason shows a severity word ("High risk", "Worth checking", "Minor") before its text, so severity never relies on color (ADR-015)
+- [x] Collapsible "Technical details" section (US-10): each reason's `details` (auth results appear there when they fail), collapsed by default; unknown severities from the backend are dropped to no word (T8); 31 add-on checks
 - [ ] Deploy; **You:** send test emails to the demo account: a clean personal email; a phishing-style one (display name "PayPal Security", Reply-To on another domain, link text `paypal.com` pointing at a shortener, `.html` attachment); a long newsletter
-- [ ] JSON copies of the same cases in `backend/tests/fixtures/` as end-to-end API tests
+- [x] JSON copies of the same cases in `backend/tests/fixtures/` as end-to-end API tests (clean → Safe, no reasons; phishing → Malicious, 6 reasons; newsletter → Safe, only "too long"); 259 backend tests
 - Check: the phishing email shows concrete, correct reasons in Gmail; the clean email shows Safe; the newsletter is not flagged for hidden text.
 
 **Step 9: Close the layer**

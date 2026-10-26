@@ -8,6 +8,7 @@
 
 var VERDICTS = ['safe', 'suspicious', 'malicious'];
 var MODES = ['organization', 'personal'];
+var SEVERITIES = ['high', 'medium', 'low'];
 
 /** Returns a validated result object, or null on any failure. */
 function analyzeMessage(message) {
@@ -133,7 +134,11 @@ function parseAnalyzeResponse(raw) {
       return r && typeof r.text === 'string';
     })
     .map(function (r) {
-      return { text: r.text, severity: r.severity, details: String(r.details || '') };
+      return {
+        text: r.text,
+        severity: SEVERITIES.indexOf(r.severity) === -1 ? null : r.severity,
+        details: String(r.details || ''),
+      };
     });
 
   return {
