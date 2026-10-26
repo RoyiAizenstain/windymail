@@ -35,6 +35,8 @@ class AnalyzeRequest(StrictModel):
     body_text: str = Field(max_length=100_000)
     body_html: str | None = Field(default=None, max_length=150_000)
     attachments: list[Attachment] = Field(default_factory=list, max_length=50)
+    # Set by the add-on when a body was cut to fit the size limits.
+    truncated: bool = False
 
 
 class Reason(StrictModel):

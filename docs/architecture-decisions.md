@@ -144,6 +144,12 @@ README.md
 ```
 **Consequences:** Two languages to maintain (JavaScript and Python), kept separate by the thin-add-on design (ADR-001). Dependencies pinned in `requirements.txt`.
 
+## ADR-017: Only normalized technical values are echoed in reasons
+**Status:** Accepted
+**Context:** The response must not reflect attacker-controlled text (T2, T6), but a reason is only useful when it names the concrete finding ("the link says paypal.com but goes to bit.ly"), and US-10 needs link destinations and authentication results.
+**Decision:** `reasons[].details` may include values the backend has parsed and normalized itself: domains, IP addresses, file extensions, and SPF/DKIM/DMARC results. Each is restricted to a narrow character set (for domains, lowercase IDNA form, `[a-z0-9.-]`) and length-capped. Subjects, body text, display names, full URLs, and filenames are never echoed. `reasons[].text` stays fixed wording from the backend, with counts only.
+**Consequences:** Reasons are concrete and verifiable without becoming a channel for attacker text. The add-on still escapes everything it renders. The no-echo test keeps covering subjects and body text.
+
 ---
 
 ## Open Decisions
@@ -151,3 +157,4 @@ README.md
 ## ADR-010: Scoring model
 **Status:** Open
 **Question:** How to combine deterministic signals and the capped LLM signal into one explainable 0-100 score. Constraint from ADR-003 applies.
+**Provisional (Layer 2, accepted 26.10):** points per deterministic finding by severity (high 35, medium 15, low 5), summed and clamped to 0-100, mapped through the verdict thresholds. Expected to become the deterministic half of the final model; the LLM contribution and its cap are still open.

@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** Not started
+**Status:** In progress (Step 1 done)
 **Stories:** US-02, US-03, US-10
 
 - [ ] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -128,14 +128,15 @@ One step at a time; each step ends with its own check before the next starts. **
 Same rules as Layer 1: one step at a time, each ends with its own check. **You** marks actions only the account owner can do. **Decision** marks a choice to confirm before the step starts.
 
 **Step 1: Decisions before code**
-- [ ] **Decision:** provisional score until ADR-010 closes. Proposal: points per finding by severity (high 35, medium 15, low 5), summed and clamped to 0-100, mapped through `verdict.py`. Without it, real reasons would sit next to the mock 42. Likely to become the deterministic half of ADR-010.
-- [ ] **Decision:** echo rule. Today nothing from the request is echoed in the response, but useful reasons need concrete values ("the link says paypal.com but goes to bit.ly"). Proposal: `details` may include values the backend has parsed and normalized (domains, IPs, file extensions, auth results), restricted to `[a-z0-9.-]`-style character sets and length-capped; never subjects, body text, display names, or full URLs. Update architecture.md and the no-echo test to match.
-- Check: both recorded in architecture-decisions.md.
+- [x] **Decision:** provisional score until ADR-010 closes. Proposal: points per finding by severity (high 35, medium 15, low 5), summed and clamped to 0-100, mapped through `verdict.py`. Without it, real reasons would sit next to the mock 42. Likely to become the deterministic half of ADR-010.
+- [x] **Decision:** echo rule. Today nothing from the request is echoed in the response, but useful reasons need concrete values ("the link says paypal.com but goes to bit.ly"). Proposal: `details` may include values the backend has parsed and normalized (domains, IPs, file extensions, auth results), restricted to `[a-z0-9.-]`-style character sets and length-capped; never subjects, body text, display names, or full URLs. Update architecture.md and the no-echo test to match.
+- Check: both recorded in architecture-decisions.md (ADR-010 provisional note, ADR-017).
 
 **Step 2: Add-on sends the whole message**
-- [ ] `buildAnalyzeRequest`: `auth_results` from `message.getHeader('Authentication-Results')`; `body_text` from `getPlainBody()`; `body_html` from `getBody()`; attachments as metadata only (`getName`, `getContentType`, `getSize`), contents never sent
-- [ ] Size budget: serialized payload kept under 190 KB (measured in UTF-8 bytes, not characters), trimming `body_html` first, then `body_text`; new request field `truncated: bool` so the backend knows (schema, models.py and architecture.md updated together)
-- [ ] `logic.test.js`: request building with body, attachments, oversized body trimmed to the budget, `truncated` set
+- [x] `buildAnalyzeRequest`: `auth_results` from `message.getHeader('Authentication-Results')`; `body_text` from `getPlainBody()`; `body_html` from `getBody()`; attachments as metadata only (`getName`, `getContentType`, `getSize`), contents never sent
+- [x] Size budget: serialized payload kept under 190 KB (measured in UTF-8 bytes, not characters), trimming `body_html` first, then `body_text`; new request field `truncated: bool` so the backend knows (schema, models.py and architecture.md updated together)
+- [x] `logic.test.js` (27 checks): request building with body, attachments, oversized body trimmed to the budget (multibyte and emoji included, never splitting a surrogate pair), `truncated` set; backend accepts `truncated` (41 tests)
+- [ ] Deploy order: backend first (it rejects unknown fields, so an add-on sending `truncated` to the old backend gets 422), then **You:** `clasp push`
 - Check: a long newsletter still gets a card; the request on Render stays under 200 KB.
 - Note: truncation is an evasion path (padding pushes a link past the cut). It becomes a finding ("Too long to check fully", low), not a silent gap, and is listed under Known Limitations.
 

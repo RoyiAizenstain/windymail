@@ -9,7 +9,19 @@ var LIMITS = {
   from: 1000,
   replyTo: 1000,
   subject: 2000,
+  authResults: 10000,
+  bodyText: 100000,
+  bodyHtml: 150000,
+  attachments: 50,
+  filename: 512,
+  mimeType: 255,
 };
+
+/**
+ * Serialized request budget in UTF-8 bytes, below the backend's 200 KB limit
+ * (ADR-011). Bodies are trimmed to fit: HTML first, then plain text.
+ */
+var MAX_REQUEST_BYTES = 190000;
 
 /** Display cap for any single untrusted value shown in a card. */
 var MAX_DISPLAY_CHARS = 200;

@@ -67,11 +67,12 @@ Request:
   "body_html": "string | null",
   "attachments": [
     { "filename": "string", "mime_type": "string", "size_bytes": 0 }
-  ]
+  ],
+  "truncated": false
 }
 ```
 
-Limits (ADR-011): body truncated by the add-on before sending; backend rejects payloads over 200 KB (413) and unknown fields.
+Limits (ADR-011): body truncated by the add-on before sending (HTML first, then plain text, to fit 190 KB; `truncated: true` when anything was cut); backend rejects payloads over 200 KB (413) and unknown fields.
 
 Response:
 ```json
@@ -98,7 +99,7 @@ Response:
 * `partial: true` when the LLM step failed (ADR-005).
 * `herd` is `null` unless the Herd Immunity stretch goal is built and the mode is organization.
 * `mode` tells the add-on which actions to show: Report button in organization mode, "Report phishing" guidance in personal mode (ADR-015). Derived from whether `SOC_WEBHOOK_URL` is set.
-* Request strings and lists have upper bounds; unknown fields are rejected (422). Nothing from the request is echoed in the response.
+* Request strings and lists have upper bounds; unknown fields are rejected (422). Nothing from the request is echoed in the response, except normalized technical values (domains, IPs, file extensions, auth results) in `reasons[].details` (ADR-017).
 * `reasons[].details` feeds the collapsible analyst section (US-10).
 
 ### `POST /api/v1/report`

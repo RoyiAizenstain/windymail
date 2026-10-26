@@ -34,6 +34,16 @@ def test_analyze_does_not_echo_request_content(client: TestClient, valid_request
     assert "UNIQUE-MARKER-7f3a" not in response.text
 
 
+def test_analyze_accepts_truncated_flag(client: TestClient, valid_request: dict) -> None:
+    valid_request["truncated"] = True
+    assert client.post(ANALYZE, json=valid_request).status_code == 200
+
+
+def test_analyze_rejects_non_boolean_truncated(client: TestClient, valid_request: dict) -> None:
+    valid_request["truncated"] = "yes please"
+    assert client.post(ANALYZE, json=valid_request).status_code == 422
+
+
 def test_analyze_rejects_unknown_field(client: TestClient, valid_request: dict) -> None:
     valid_request["unexpected"] = "x"
     assert client.post(ANALYZE, json=valid_request).status_code == 422

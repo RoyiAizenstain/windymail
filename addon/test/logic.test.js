@@ -11,9 +11,23 @@ for (const bad of [{score:101},{score:-1},{score:4.5},{score:'42'},{verdict:'fin
   t('rejects '+JSON.stringify(bad), () => assert.throws(() => ctx.parseAnalyzeResponse({...good, ...bad})));
 t('rejects null', () => assert.throws(() => ctx.parseAnalyzeResponse(null)));
 t('drops malformed reasons', () => assert.equal(ctx.parseAnalyzeResponse({...good, reasons:[null,{x:1},{text:'ok'}]}).reasons.length, 1));
-const msg = { getId:()=> 'id1', getFrom:()=> 'a'.repeat(1500), getReplyTo:()=> '', getSubject:()=> 's'.repeat(3000) };
-t('request clipped to backend limits', () => { const q = ctx.buildAnalyzeRequest(msg); assert.equal(q.from.length,1000); assert.equal(q.subject.length,2000); assert.equal(q.reply_to,null); });
-t('request has exactly schema fields', () => assert.deepEqual(Object.keys(ctx.buildAnalyzeRequest(msg)).sort(), ['attachments','auth_results','body_html','body_text','from','message_id','reply_to','subject']));
+const att = (name, type, size) => ({ getName:()=> name, getContentType:()=> type, getSize:()=> size });
+const mkMsg = (o = {}) => ({ getId:()=> 'id1', getFrom:()=> 'a@b.com', getReplyTo:()=> '', getSubject:()=> 's',
+  getHeader:()=> o.auth || '', getPlainBody:()=> o.text || '', getBody:()=> o.html || '', getAttachments:()=> o.atts || [],
+  ...o.overrides });
+const bytes = (q) => Buffer.byteLength(JSON.stringify(q), 'utf8');
+t('request clipped to backend limits', () => { const q = ctx.buildAnalyzeRequest(mkMsg({overrides:{getFrom:()=> 'a'.repeat(1500), getSubject:()=> 's'.repeat(3000)}})); assert.equal(q.from.length,1000); assert.equal(q.subject.length,2000); assert.equal(q.reply_to,null); });
+t('request has exactly schema fields', () => assert.deepEqual(Object.keys(ctx.buildAnalyzeRequest(mkMsg())).sort(), ['attachments','auth_results','body_html','body_text','from','message_id','reply_to','subject','truncated']));
+t('request carries auth results and bodies', () => { const q = ctx.buildAnalyzeRequest(mkMsg({auth:'mx.google.com; spf=pass', text:'hi', html:'<p>hi</p>'})); assert.equal(q.auth_results,'mx.google.com; spf=pass'); assert.equal(q.body_text,'hi'); assert.equal(q.body_html,'<p>hi</p>'); assert.equal(q.truncated,false); });
+t('empty message maps to nulls', () => { const q = ctx.buildAnalyzeRequest(mkMsg()); assert.equal(q.auth_results,null); assert.equal(q.body_html,null); assert.equal(q.body_text,''); });
+t('attachments are metadata only', () => { const q = ctx.buildAnalyzeRequest(mkMsg({atts:[att('x'.repeat(600)+'.exe','application/octet-stream',10)]})); assert.deepEqual(Object.keys(q.attachments[0]).sort(), ['filename','mime_type','size_bytes']); assert.equal(q.attachments[0].filename.length,512); });
+t('attachments capped at 50', () => assert.equal(ctx.buildAnalyzeRequest(mkMsg({atts:Array(60).fill(att('a.pdf','application/pdf',1))})).attachments.length, 50));
+t('field limit sets truncated', () => { const q = ctx.buildAnalyzeRequest(mkMsg({text:'t'.repeat(100001)})); assert.equal(q.body_text.length,100000); assert.equal(q.truncated,true); });
+t('html trimmed first to fit budget', () => { const q = ctx.buildAnalyzeRequest(mkMsg({text:'t'.repeat(90000), html:'h'.repeat(150000)})); assert.ok(bytes(q) <= 190000); assert.equal(q.body_text.length,90000); assert.ok(q.body_html.length < 150000); assert.equal(q.truncated,true); });
+t('text trimmed when html is not enough', () => { const q = ctx.buildAnalyzeRequest(mkMsg({text:'t'.repeat(100000), html:'h'.repeat(150000), overrides:{getSubject:()=> 's'.repeat(2000)}})); assert.ok(bytes(q) <= 190000); });
+t('budget counts multibyte and escaped characters', () => { for (const ch of ['ש','😀','"','<']) { const q = ctx.buildAnalyzeRequest(mkMsg({text:ch.repeat(60000), html:ch.repeat(60000)})); assert.ok(bytes(q) <= 190000, ch); } });
+t('never splits a surrogate pair', () => { const q = ctx.buildAnalyzeRequest(mkMsg({text:'😀'.repeat(50000), html:'😀'.repeat(50000)})); for (const f of ['body_text','body_html']) if (q[f]) assert.ok(!/[\ud800-\udbff]$/.test(q[f])); assert.ok(bytes(q) <= 190000); });
+t('utf8Length matches Buffer', () => { for (const s of ['abc','ש','😀x','é€']) assert.equal(ctx.utf8Length(s), Buffer.byteLength(s,'utf8')); });
 t('escapes html', () => assert.equal(ctx.toPlainText('<a href="x">pay</a> & co'), '&lt;a href=&quot;x&quot;&gt;pay&lt;/a&gt; &amp; co'));
 t('truncates display', () => assert.equal(ctx.toPlainText('x'.repeat(500)).length, 201));
 t('null safe', () => assert.equal(ctx.toPlainText(null), ''));
