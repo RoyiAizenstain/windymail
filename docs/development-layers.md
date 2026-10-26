@@ -25,7 +25,7 @@ README is written along the way: each layer adds its section.
 ---
 
 ## Layer 1: End-to-End Skeleton
-**Status:** In progress (plan written, Step 1 next)
+**Status:** In progress (Step 1 done, Step 2 next)
 **Stories:** US-01, US-12 · **ADRs:** 001, 002, 006, 012
 
 - [ ] Apps Script add-on with contextual trigger on message open
@@ -36,7 +36,7 @@ README is written along the way: each layer adds its section.
 - [ ] Minimal OAuth scopes in `appsscript.json` (including `openid`)
 - [ ] Verify early that `ScriptApp.getIdentityToken()` returns a token the backend can validate (ADR-011)
 - [ ] Config loaded from environment, `.env.example` committed
-- [ ] Public repo created; README skeleton
+- [x] Public repo created; README skeleton
 
 **Done when:** opening any email shows the mock result from the deployed backend.
 
@@ -44,10 +44,10 @@ README is written along the way: each layer adds its section.
 One step at a time; each step ends with its own check before the next starts. **You** marks actions only the account owner can do.
 
 **Step 1: Repo setup**
-- [ ] `git init`; folders `/addon`, `/backend`, `/docs` (ADR-016)
-- [ ] `.gitignore`: `.env`, `__pycache__/`, `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.clasprc.json`
-- [ ] README skeleton: one-paragraph pitch, status, section headings to fill per layer
-- [ ] **You:** create the public GitHub repo; first commit and push
+- [x] `git init`; folders `/addon`, `/backend`, `/docs` (ADR-016)
+- [x] `.gitignore`: `.env`, `__pycache__/`, `.venv/`, `.pytest_cache/`, `.ruff_cache/`, `.clasprc.json`; `docs/assignment.md` kept local (the brief is not published)
+- [x] README skeleton: one-paragraph pitch, status, section headings to fill per layer
+- [x] Public GitHub repo created and pushed: https://github.com/RoyiAizenstain/windymail
 - Check: repo visible on GitHub, no secrets in it.
 
 **Step 2: Backend skeleton (local)**
