@@ -9,7 +9,7 @@ import re
 from collections.abc import Callable, Sequence
 
 from app.models import AnalyzeRequest, Reason
-from app.signals import content, sender
+from app.signals import content, lookalike, sender
 from app.signals.base import Finding
 from app.signals.messages import CATALOG
 
@@ -19,6 +19,7 @@ Check = Callable[[AnalyzeRequest], list[Finding]]
 
 CHECKS: tuple[tuple[str, Check], ...] = (
     ("sender", sender.check),
+    ("lookalike", lookalike.check),
     ("content", content.check),
 )
 

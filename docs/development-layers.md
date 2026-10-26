@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (Steps 1-4 done; Step 2 waits on `clasp push`)
+**Status:** In progress (Steps 1-5 done; Step 2 waits on `clasp push`)
 **Stories:** US-02, US-03, US-10
 
 - [ ] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -163,10 +163,13 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - Check: tests pass.
 
 **Step 5: Lookalike domains**
-- [ ] Short brand list in code (about 20: PayPal, Microsoft, Google, Apple, Amazon, Netflix, DHL, FedEx, LinkedIn, DocuSign, Dropbox, Meta, local banks, Upwind)
-- [ ] Flags: punycode (`xn--`) domains; character swaps after normalization (`0`→`o`, `1`→`l`, `rn`→`m`, `vv`→`w`); edit distance 1 to a brand name (2 for names of 8+ letters); brand placed in a subdomain or hyphenated label of another domain (`paypal.com.secure-login.xyz`, `paypal-support.com`); an exact brand domain is never flagged
-- [ ] Applied to From, Reply-To and every link destination
-- [ ] Tests: each pattern flagged; real brand domains and common unrelated domains not flagged
+- [x] Short brand list in code (about 20: PayPal, Microsoft, Google, Apple, Amazon, Netflix, DHL, FedEx, LinkedIn, DocuSign, Dropbox, Meta, local banks, Upwind)
+- [x] Flags: punycode (`xn--`) domains; character swaps after normalization (`0`→`o`, `1`→`l`, `rn`→`m`, `vv`→`w`); edit distance 1 to a brand name (2 for names of 8+ letters); brand placed in a subdomain or hyphenated label of another domain (`paypal.com.secure-login.xyz`, `paypal-support.com`); an exact brand domain is never flagged
+- [x] Applied to From and Reply-To; `lookalike.assess(host)` is ready for link destinations in Step 6
+- [x] Tests: each pattern flagged; real brand domains and common unrelated domains not flagged (37 new, 157 total)
+- Note: two strengths. High `lookalike`: a trick applied (swapped character, `i`/`l`, other alphabet, accent, one-letter typo). Medium `brand_in_domain`: the exact name on a domain the brand doesn't own (`paypal.xyz`, but also real regional sites like `amazon.ca`) or as a word inside another domain (`paypal-support.com`)
+- Note: typo rule tuned against false alarms: for 6-7 letter names only an added, missing or swapped-order letter counts, since one substituted letter turns `google` into the real word `googly`
+- Note: brands list "sends from" separately from "also owns": `gmail.com` is Google's (never a lookalike) but never proof a sender is Google
 - Check: tests pass.
 
 **Step 6: Link checks**

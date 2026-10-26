@@ -29,13 +29,19 @@ def normalize_host(host: str) -> str | None:
 
 def registered_domain(host: str) -> str | None:
     """`login.paypal.co.uk` → `paypal.co.uk`. None for IPs and hosts without a public suffix."""
+    parts = split_host(host)
+    return f"{parts[1]}.{parts[2]}" if parts else None
+
+
+def split_host(host: str) -> tuple[str, str, str] | None:
+    """`a.b.paypal.co.uk` → (`a.b`, `paypal`, `co.uk`). None without a public suffix."""
     normalized = normalize_host(host)
     if normalized is None:
         return None
     parts = _extract(normalized)
     if not parts.domain or not parts.suffix:
         return None
-    return f"{parts.domain}.{parts.suffix}"
+    return parts.subdomain, parts.domain, parts.suffix
 
 
 def parse_address(value: str | None) -> tuple[str, str | None]:

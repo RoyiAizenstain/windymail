@@ -5,30 +5,42 @@ actually comes from, so a match outside them is a meaningful signal.
 """
 
 import re
+from dataclasses import dataclass
 
-# Brand ID → (words that name it, official registered domains).
-BRANDS: dict[str, tuple[tuple[str, ...], tuple[str, ...]]] = {
-    "paypal": (("paypal",), ("paypal.com",)),
-    "microsoft": (
+
+@dataclass(frozen=True)
+class Brand:
+    words: tuple[str, ...]
+    # Domains the brand's own mail comes from.
+    sends_from: tuple[str, ...]
+    # Real domains it owns where anyone can have an address (gmail.com): never
+    # proof that a sender is the brand, and never a lookalike of it either.
+    also_owns: tuple[str, ...] = ()
+
+
+BRANDS: dict[str, Brand] = {
+    "paypal": Brand(("paypal",), ("paypal.com",)),
+    "microsoft": Brand(
         ("microsoft", "outlook", "office 365", "office365", "onedrive", "sharepoint"),
-        ("microsoft.com", "microsoftonline.com", "office.com", "outlook.com", "live.com"),
+        ("microsoft.com", "microsoftonline.com", "office.com"),
+        ("outlook.com", "live.com", "hotmail.com"),
     ),
-    "google": (("google", "gmail"), ("google.com", "youtube.com")),
-    "apple": (("apple", "icloud", "itunes"), ("apple.com",)),
-    "amazon": (("amazon",), ("amazon.com", "amazon.co.uk", "amazon.de", "amazon.fr")),
-    "netflix": (("netflix",), ("netflix.com",)),
-    "dhl": (("dhl",), ("dhl.com", "dhl.de")),
-    "fedex": (("fedex",), ("fedex.com",)),
-    "linkedin": (("linkedin",), ("linkedin.com",)),
-    "docusign": (("docusign",), ("docusign.com", "docusign.net")),
-    "dropbox": (("dropbox",), ("dropbox.com", "dropboxmail.com")),
-    "meta": (
+    "google": Brand(("google", "gmail"), ("google.com", "youtube.com"), ("gmail.com",)),
+    "apple": Brand(("apple", "icloud", "itunes"), ("apple.com",), ("icloud.com", "me.com")),
+    "amazon": Brand(("amazon",), ("amazon.com", "amazon.co.uk", "amazon.de", "amazon.fr")),
+    "netflix": Brand(("netflix",), ("netflix.com",)),
+    "dhl": Brand(("dhl",), ("dhl.com", "dhl.de")),
+    "fedex": Brand(("fedex",), ("fedex.com",)),
+    "linkedin": Brand(("linkedin",), ("linkedin.com",)),
+    "docusign": Brand(("docusign",), ("docusign.com", "docusign.net")),
+    "dropbox": Brand(("dropbox",), ("dropbox.com", "dropboxmail.com")),
+    "meta": Brand(
         ("facebook", "instagram", "whatsapp"),
         ("facebook.com", "facebookmail.com", "meta.com", "instagram.com", "whatsapp.com"),
     ),
-    "leumi": (("leumi",), ("leumi.co.il",)),
-    "hapoalim": (("hapoalim",), ("bankhapoalim.co.il",)),
-    "upwind": (("upwind",), ("upwind.io",)),
+    "leumi": Brand(("leumi",), ("leumi.co.il",)),
+    "hapoalim": Brand(("hapoalim",), ("bankhapoalim.co.il",)),
+    "upwind": Brand(("upwind",), ("upwind.io",)),
 }
 
 # Characters that pass for others at a glance. Uppercase I is mapped before lowercasing.
@@ -52,15 +64,24 @@ def brands_named_in(text: str) -> list[str]:
     words = " ".join(re.findall(r"[a-z0-9]+", shape))
     compact = words.replace(" ", "")
     found = []
-    for brand, (names, _) in BRANDS.items():
-        for name in names:
+    for brand_id, brand in BRANDS.items():
+        for name in brand.words:
             whole_word = re.search(rf"(?<![a-z0-9]){re.escape(name)}(?![a-z0-9])", words)
             spaced_out = len(name) >= _MIN_COMPACT_LEN and name.replace(" ", "") in compact
             if whole_word or spaced_out:
-                found.append(brand)
+                found.append(brand_id)
                 break
     return found
 
 
-def is_official(brand: str, domain: str | None) -> bool:
-    return domain is not None and domain in BRANDS[brand][1]
+def is_official(brand_id: str, domain: str | None) -> bool:
+    """True only for domains the brand's own mail comes from."""
+    return domain is not None and domain in BRANDS[brand_id].sends_from
+
+
+def owner_of(domain: str) -> str | None:
+    """The brand that really owns this registered domain, if any."""
+    for brand_id, brand in BRANDS.items():
+        if domain in brand.sends_from or domain in brand.also_owns:
+            return brand_id
+    return None

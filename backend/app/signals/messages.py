@@ -66,6 +66,26 @@ CATALOG: dict[str, Message] = {
         text="If you reply, your answer goes to a different domain than the sender's.",
         details="Sending domain, then the reply-to domain",
     ),
+    "sender_lookalike": Message(
+        category="sender",
+        severity="high",
+        text="The sender's address imitates a well-known company's web address.",
+        details="Brand imitated, then the lookalike domain",
+    ),
+    "sender_brand_in_domain": Message(
+        category="sender",
+        severity="medium",
+        text="The sender's address uses a well-known company's name, "
+        "but the domain doesn't belong to that company.",
+        details="Brand named, then the sending domain",
+    ),
+    "sender_mixed_script": Message(
+        category="sender",
+        severity="medium",
+        text="The sender's address mixes letters from different alphabets, "
+        "a trick used to imitate real addresses.",
+        details="Domain (punycode form)",
+    ),
     # Content
     "body_truncated": Message(
         category="content",
