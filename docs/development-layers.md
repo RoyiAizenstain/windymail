@@ -108,7 +108,7 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (Steps 1-6 done; Step 2 waits on `clasp push`)
+**Status:** In progress (Steps 1-7 done; Step 2 waits on `clasp push`)
 **Stories:** US-02, US-03, US-10
 
 - [ ] Add-on extracts headers, body (text + HTML), attachment metadata
@@ -185,10 +185,12 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - Check: tests pass.
 
 **Step 7: Attachments and hidden text**
-- [ ] Attachment extensions: executables and scripts (`.exe .scr .js .vbs .bat .cmd .ps1 .hta .msi .lnk .jar`) high; double extension (`invoice.pdf.exe`) and right-to-left override character in the name high; macro Office files, disk images (`.iso .img .vhd`), HTML/SVG attachments (HTML smuggling) medium; archives low
-- [ ] Hidden text in HTML via inline styles (`display:none`, `visibility:hidden`, `font-size:0`, `opacity:0`, zero height with overflow hidden): low when it is a substantial block, medium when it holds a link. Short hidden preview text is normal in newsletters and is ignored
-- [ ] Hidden text is reported, not interpreted; injection inside it is a Layer 3 concern
-- [ ] Tests per case, including a newsletter preheader that must not be flagged
+- [x] Attachment extensions: executables and scripts (`.exe .scr .js .vbs .bat .cmd .ps1 .hta .msi .lnk .jar`) high; double extension (`invoice.pdf.exe`) and right-to-left override character in the name high; macro Office files, disk images (`.iso .img .vhd`), HTML/SVG attachments (HTML smuggling) medium; archives low
+- [x] Hidden text in HTML via inline styles (`display:none`, `visibility:hidden`, `font-size:0`, `opacity:0`, zero height with overflow hidden): low when it is a substantial block, medium when it holds a link. Short hidden preview text is normal in newsletters and is ignored
+- [x] Hidden text is reported, not interpreted; injection inside it is a Layer 3 concern
+- [x] Tests per case, including a newsletter preheader that must not be flagged (51 new, 255 total)
+- Note: only the extension is reported, never the filename (ADR-017); trailing dots and spaces dropped as Windows does (`invoice.exe.` runs as `.exe`); a double extension is reported only when a trusted type (`.pdf`, `.jpg`, ...) sits in front of a program
+- Note: hidden text counts letters and digits only, so newsletter padding (`&zwnj;&nbsp;`) never adds up; nested hidden elements counted once; inline styles only, so content hidden by stylesheets or shown by media queries is a known blind spot, and newsletters that hide a mobile menu with links will get the medium `hidden_link`
 - Check: tests pass.
 
 **Step 8: Card and live test**

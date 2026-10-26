@@ -140,7 +140,71 @@ CATALOG: dict[str, Message] = {
         text_many="{count} links are shortened, which hides where they really go.",
         details="Shortening service",
     ),
+    # Attachments
+    "attachment_disguised_name": Message(
+        category="attachment",
+        severity="high",
+        text="An attachment's name uses hidden characters to disguise its real file type.",
+        text_many="{count} attachments' names use hidden characters to disguise their file type.",
+        details="Right-to-left or other display-reordering character in the filename",
+    ),
+    "attachment_double_extension": Message(
+        category="attachment",
+        severity="high",
+        text="An attachment pretends to be a document but is really a program.",
+        text_many="{count} attachments pretend to be documents but are really programs.",
+        details="Extensions",
+    ),
+    "attachment_executable": Message(
+        category="attachment",
+        severity="high",
+        text="An attachment is a program or script. Opening it could harm your computer.",
+        text_many="{count} attachments are programs or scripts. "
+        "Opening them could harm your computer.",
+        details="Extension",
+    ),
+    "attachment_macro": Message(
+        category="attachment",
+        severity="medium",
+        text="An attachment is an Office file that can run macros.",
+        text_many="{count} attachments are Office files that can run macros.",
+        details="Extension",
+    ),
+    "attachment_disk_image": Message(
+        category="attachment",
+        severity="medium",
+        text="An attachment is a disk image, often used to slip programs past security checks.",
+        text_many="{count} attachments are disk images, "
+        "often used to slip programs past security checks.",
+        details="Extension",
+    ),
+    "attachment_web_page": Message(
+        category="attachment",
+        severity="medium",
+        text="An attachment is a web page file. These can show fake sign-in pages.",
+        text_many="{count} attachments are web page files. These can show fake sign-in pages.",
+        details="Extension",
+    ),
+    "attachment_archive": Message(
+        category="attachment",
+        severity="low",
+        text="An attachment is a compressed archive, which can hide what's inside.",
+        text_many="{count} attachments are compressed archives, which can hide what's inside.",
+        details="Extension",
+    ),
     # Content
+    "hidden_link": Message(
+        category="content",
+        severity="medium",
+        text="This email contains links hidden from view.",
+        details="Links inside content hidden with inline styles",
+    ),
+    "hidden_text": Message(
+        category="content",
+        severity="low",
+        text="This email contains a large block of text hidden from view.",
+        details="Letters and digits hidden with inline styles",
+    ),
     "body_truncated": Message(
         category="content",
         severity="low",
