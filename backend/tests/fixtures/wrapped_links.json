@@ -1,0 +1,28 @@
+{
+  "about": "The live Gmail test email (26.10): every link wrapped in google.com/url?q=. The checks must see the real targets: one text mismatch, the decimal IP link, no false mismatches on the honest links.",
+  "request": {
+    "message_id": "wrapped-1",
+    "from": "Tester <tester@example.com>",
+    "subject": "Your account is limited",
+    "auth_results": "mx.google.com; dkim=pass header.i=@example.com; spf=pass smtp.mailfrom=tester@example.com; dmarc=pass header.from=example.com",
+    "body_text": "Your account has been limited. Confirm your details at https://www.google.com/url?q=http://www.paypal.com&source=gmail&sa=E within 24 hours.",
+    "body_html": "<div style=\"display:none\"><a href=\"https://www.google.com/url?q=https://example.net/hidden&amp;source=gmail&amp;sa=E\">hidden</a></div><p>Your account has been limited.</p><p>Confirm your details at <a href=\"https://www.google.com/url?q=https://example.org/windymail-test&amp;source=gmail&amp;sa=E\">www.paypal.com</a> within 24 hours.</p><p>Or use our secure server: <a href=\"https://www.google.com/url?q=http://3232235777/&amp;source=gmail&amp;sa=E\">Sign in</a></p><p>Links go to <a href=\"https://www.google.com/url?q=http://example.org&amp;source=gmail&amp;sa=E\">example.org</a> and <a href=\"https://www.google.com/url?q=http://paypal.com&amp;source=gmail&amp;sa=E\">paypal.com</a>.</p>",
+    "attachments": [
+      {
+        "filename": "Account-Review.html",
+        "mime_type": "text/html",
+        "size_bytes": 2048
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "malicious",
+    "reasons": [
+      "link_text_mismatch",
+      "link_ip",
+      "attachment_web_page",
+      "hidden_link"
+    ]
+  }
+}

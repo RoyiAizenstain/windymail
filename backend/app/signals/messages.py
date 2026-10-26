@@ -33,6 +33,13 @@ CATALOG: dict[str, Message] = {
         text="This email failed the check that confirms it comes from the address it shows.",
         details="Authentication-Results",
     ),
+    "dmarc_fail_unenforced": Message(
+        category="sender",
+        severity="medium",
+        text="We couldn't confirm this email comes from the address it shows. This is "
+        "common for newsletters, but be careful with links and requests.",
+        details="Authentication-Results (domain policy: don't act on failures)",
+    ),
     "spf_fail": Message(
         category="sender",
         severity="medium",

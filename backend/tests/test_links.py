@@ -1,7 +1,19 @@
+from urllib.parse import quote
+
 import pytest
 
 from app.models import AnalyzeRequest
-from app.signals.links import MAX_LINKS, check, destination, extract_links, link_findings
+from app.signals.links import (
+    MAX_EMBEDDED,
+    MAX_LINKS,
+    MAX_UNWRAP,
+    check,
+    destination,
+    embedded_urls,
+    extract_links,
+    link_findings,
+    unwrap,
+)
 
 
 def request(html: str | None = None, text: str = "") -> AnalyzeRequest:
@@ -133,6 +145,110 @@ def test_mismatch_and_lookalike_together() -> None:
         "link_text_mismatch",
         "link_lookalike",
     ]
+
+
+# Redirect wrappers: the checks see the target inside
+
+
+@pytest.mark.parametrize(
+    ("href", "target"),
+    [
+        ("https://www.google.com/url?q=http://3232235777/&sa=E", "http://3232235777/"),
+        ("https://google.com/url?url=https%3A%2F%2Fevil.xyz%2Fa", "https://evil.xyz/a"),
+        ("https://eur01.safelinks.protection.outlook.com/?url=https%3A%2F%2Fevil.xyz&data=x",
+         "https://evil.xyz"),
+        # wrapped twice
+        ("https://www.google.com/url?q=https%3A%2F%2Fwww.google.com%2Furl%3Fq%3Dhttps%3A%2F%2Fevil.xyz",
+         "https://evil.xyz"),
+    ],
+)  # fmt: skip
+def test_unwrap(href: str, target: str) -> None:
+    assert unwrap(href) == target
+
+
+@pytest.mark.parametrize(
+    "href",
+    ["https://www.google.com/search?q=https://evil.xyz",  # not the redirect path
+     "https://google.com@evil.xyz/url?q=https://paypal.com",  # really goes to evil.xyz
+     "https://evil.xyz/url?q=https://paypal.com",  # not a known redirector
+     "https://www.google.com/url",  # nothing inside
+     "Click here"],
+)  # fmt: skip
+def test_unwrap_leaves_others(href: str) -> None:
+    assert unwrap(href) == href
+
+
+def test_unwrap_depth_is_capped() -> None:
+    href = "https://evil.xyz"
+    for _ in range(MAX_UNWRAP + 3):
+        href = "https://www.google.com/url?q=" + quote(href, safe="")
+    assert unwrap(href).startswith("https://www.google.com/url?q=")
+
+
+def test_wrapped_ip_link_is_found() -> None:
+    findings = link_findings("https://www.google.com/url?q=http://3232235777/&sa=E", "Sign in")
+    assert [(f.id, f.values) for f in findings] == [("link_ip", ("192.168.1.1",))]
+
+
+def test_wrapped_link_matching_its_text_is_clean() -> None:
+    assert link_findings("https://www.google.com/url?q=http://paypal.com&sa=E", "paypal.com") == []
+
+
+def test_wrapped_text_url_is_unwrapped_too() -> None:
+    url = "https://www.google.com/url?q=http://www.paypal.com&sa=E"
+    assert link_findings(url, url) == []
+
+
+def test_wrapped_mismatch_reports_real_target() -> None:
+    findings = link_findings("https://www.google.com/url?q=https://evil.xyz", "www.paypal.com")
+    assert [(f.id, f.values) for f in findings] == [
+        ("link_text_mismatch", ("paypal.com", "evil.xyz"))
+    ]
+
+
+# Addresses carried inside a link, on any site
+
+
+def test_embedded_urls_found_on_any_site() -> None:
+    href = "https://shop.example/out?to=http%3A%2F%2F3232235777%2F&ref=www.paypa1.com"
+    assert embedded_urls(href) == ["http://3232235777/", "www.paypa1.com"]
+
+
+def test_embedded_urls_nested_and_capped() -> None:
+    href = "https://a.example/r?u=" + quote("https://b.example/r?u=https://evil.xyz", safe="")
+    assert embedded_urls(href) == ["https://b.example/r?u=https://evil.xyz", "https://evil.xyz"]
+    many = "https://a.example/?" + "&".join(f"u{i}=https://s{i}.com" for i in range(30))
+    assert len(embedded_urls(many)) == MAX_EMBEDDED
+
+
+@pytest.mark.parametrize(
+    "href", ["https://a.example/?q=shoes&page=2", "https://a.example/?next=/account", "http://[bad"]
+)
+def test_no_embedded_urls(href: str) -> None:
+    assert embedded_urls(href) == []
+
+
+def test_redirect_on_unknown_site_to_ip_is_found() -> None:
+    findings = link_findings("https://news.shop.com/click?url=http://3232235777/", "Read more")
+    assert [(f.id, f.values) for f in findings] == [("link_ip", ("192.168.1.1",))]
+
+
+def test_redirect_on_unknown_site_to_lookalike_is_found() -> None:
+    findings = link_findings("https://news.shop.com/r?target=https://login.paypa1.com", "Sign in")
+    assert [(f.id, f.values) for f in findings] == [("link_lookalike", ("paypal", "paypa1.com"))]
+
+
+def test_decoy_address_does_not_hide_a_mismatch() -> None:
+    # The link really goes to evil.xyz; the paypal.com inside it is only a decoy.
+    findings = link_findings("https://evil.xyz/?x=https://www.paypal.com", "www.paypal.com")
+    assert [(f.id, f.values) for f in findings] == [
+        ("link_text_mismatch", ("paypal.com", "evil.xyz"))
+    ]
+
+
+def test_same_finding_inside_a_link_counted_once() -> None:
+    href = "https://bit.ly/a?u=https://bit.ly/b"
+    assert ids(link_findings(href, "x")) == ["link_shortener"]
 
 
 # Extraction

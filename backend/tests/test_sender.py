@@ -59,9 +59,48 @@ def test_authserv_id_with_version_is_accepted() -> None:
 
 
 def test_dmarc_fail_is_reported_alone() -> None:
-    findings = auth_findings("mx.google.com; spf=fail; dkim=fail; dmarc=fail (p=NONE)")
+    findings = auth_findings("mx.google.com; spf=fail; dkim=fail; dmarc=fail (p=REJECT)")
     assert ids(findings) == ["dmarc_fail"]
     assert findings[0].values == ("dmarc=fail",)
+
+
+NEWSLETTER_DMARC_FAIL = (
+    "mx.google.com; dkim=pass header.i=@esp-mailer.com header.s=s1; "
+    "spf=pass (google.com: domain of bounce@esp-mailer.com designates 1.2.3.4 as permitted "
+    "sender) smtp.mailfrom=bounce@esp-mailer.com; "
+    "dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=shop.co.il"
+)
+
+
+def test_dmarc_fail_with_policy_none_is_medium() -> None:
+    findings = auth_findings(NEWSLETTER_DMARC_FAIL)
+    assert [(f.id, f.values) for f in findings] == [
+        ("dmarc_fail_unenforced", ("dmarc=fail", "p=none"))
+    ]
+
+
+@pytest.mark.parametrize(
+    "comment",
+    ["(p=QUARANTINE sp=QUARANTINE dis=QUARANTINE)", "(p=REJECT sp=REJECT dis=REJECT)",
+     "(p=NONE sp=REJECT dis=NONE)",  # subdomains enforced
+     "(dis=NONE)", "()", ""],  # policy missing: treated as enforced
+)  # fmt: skip
+def test_dmarc_fail_enforced_or_unclear_stays_high(comment: str) -> None:
+    header = f"mx.google.com; spf=fail; dmarc=fail {comment} header.from=x.com"
+    assert ids(auth_findings(header)) == ["dmarc_fail"]
+
+
+def test_planted_policy_in_another_comment_is_ignored() -> None:
+    # The sender controls the address in the SPF comment; only Gmail's DMARC comment counts.
+    header = (
+        'mx.google.com; spf=fail (google.com: domain of "p=none"@evil.xyz; dmarc=fail (p=NONE)) '
+        "smtp.mailfrom=evil.xyz; dmarc=fail (p=REJECT sp=REJECT dis=REJECT) header.from=bank.com"
+    )
+    assert ids(auth_findings(header)) == ["dmarc_fail"]
+
+
+def test_policy_from_forged_header_is_ignored() -> None:
+    assert ids(auth_findings("mail.attacker.xyz; dmarc=fail (p=NONE)")) == ["auth_unknown"]
 
 
 @pytest.mark.parametrize("result", ["fail", "softfail", "SoftFail"])

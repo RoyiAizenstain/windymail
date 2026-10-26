@@ -158,6 +158,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - [x] Display name vs address: display name contains an email address or domain that differs from the real one, or names a known brand that the sending domain doesn't belong to
 - [x] Reply-To vs From: different registered domain → medium
 - [x] Tests per case, including a forged second `Authentication-Results` header claiming `pass` (45 new, 120 total)
+- [x] DMARC fail with policy `p=none` (and `sp=none`) is medium, not high (ADR-018, found in the live test 27.10: a real newsletter was marked Suspicious); policy read only from Gmail's own comment after `dmarc=fail`
 - Note: DMARC fail is reported alone (it already covers SPF and DKIM alignment, so stacking would double count); one valid DKIM signature among several is enough; `spf=neutral/none` is not a failure
 - Note: Python's strict address parser rejects `support@paypal.com <x@evil.xyz>` (the classic impersonation form), so `parse_address` falls back to the last `<…>` as the real address, as mail clients do
 - Note: brand list in `signals/brands.py` (shared with Step 5); free-mail domains never count as a brand's own (`Google Support <x@gmail.com>` is flagged)
@@ -182,6 +183,8 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - [x] Tests per case, including obfuscated forms (47 new, 204 total)
 - [x] Link destinations also go through the Step 5 lookalike check (`link_lookalike`, `link_brand_in_domain`)
 - Note: newsletter services route every link through click-tracking domains (`sendgrid.net`, `list-manage.com`, ...), so the text-vs-destination check skips a short list of them; all other checks still run on those links
+- [x] Redirect wrappers unwrapped before every check (found in the live test, 27.10): `google.com/url?q=` and Outlook SafeLinks carry the real target inside the link, and the checks saw only google.com (missed the IP link, two false mismatches). Parsed, never followed; nesting capped at 5. Fixture `wrapped_links.json` reproduces the live email (→ Malicious, 80)
+- [x] Generic, any site: web addresses carried inside a link (`?to=https://...`, up to 10) also get the IP, shortener and lookalike checks, since any open redirect can forward to them. They are not trusted for the text-vs-destination check (an attacker could add `?x=https://paypal.com` as a decoy), so that check uses the link's own site except for the known redirectors; 283 backend tests
 - Note: whitespace handled as browsers do (WHATWG): ends trimmed, tabs and newlines removed anywhere, a space inside the host makes the URL invalid; a host ending in a number that is not a valid IPv4 is invalid too
 - Check: tests pass.
 

@@ -2,14 +2,15 @@
 
 Every link is normalized the way a browser would read it before any check (T3):
 whitespace and backslashes, `user@host` (`https://paypal.com@evil.xyz` goes to
-evil.xyz), percent-encoding, punycode, and numeric IPv4 forms (`http://3232235777`).
+evil.xyz), percent-encoding, punycode, numeric IPv4 forms (`http://3232235777`), and
+redirect wrappers (`google.com/url?q=`, Outlook SafeLinks) unwrapped to their target.
 URLs are never fetched or resolved: no network call on attacker-supplied input.
 """
 
 import ipaddress
 import re
 from dataclasses import dataclass
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from bs4 import BeautifulSoup
 
@@ -37,6 +38,14 @@ CLICK_TRACKERS = {
     "awstrack.me", "klclick.com", "ctrk.klclick.com", "substack.com",
 }  # fmt: skip
 
+# Redirectors whose target sits in the link itself (Gmail and Outlook rewrite links
+# this way, and attackers borrow the trick). Unwrapped before any check.
+GOOGLE_REDIRECT_HOSTS = {"google.com", "www.google.com"}
+SAFELINKS_SUFFIX = ".safelinks.protection.outlook.com"
+MAX_UNWRAP = 5
+MAX_EMBEDDED = 10
+_EMBEDDED_URL = re.compile(r"(?:https?:[/\\]|www\.)", re.IGNORECASE)
+
 _TAB_OR_NEWLINE = re.compile(r"[\t\n\r]")
 _C0_OR_SPACE = "".join(chr(code) for code in range(0x21))
 _TEXT_URL = re.compile(r"https?://[^\s<>\"']+|www\.[^\s<>\"']+", re.IGNORECASE)
@@ -52,15 +61,20 @@ class Destination:
     is_ip: bool = False
 
 
-def destination(href: str) -> Destination | None:
-    """Where a browser would go for this href. None for relative, mailto, tel, or junk."""
+def _clean(href: str) -> str:
     # Browsers trim control characters and spaces at the ends, drop tabs and newlines
     # anywhere, and treat \\ as / (WHATWG URL parsing).
     url = _TAB_OR_NEWLINE.sub("", href.strip(_C0_OR_SPACE)).replace("\\", "/")
     if url.lower().startswith("www."):
-        url = "http://" + url
-    elif url.startswith("//"):
-        url = "https:" + url
+        return "http://" + url
+    if url.startswith("//"):
+        return "https:" + url
+    return url
+
+
+def destination(href: str) -> Destination | None:
+    """Where a browser would go for this href. None for relative, mailto, tel, or junk."""
+    url = _clean(href)
     scheme, _, _ = url.partition(":")
     scheme = scheme.lower()
     if scheme in SCRIPT_SCHEMES:
@@ -124,6 +138,41 @@ def _ipv4(host: str) -> str | None:
     return str(ipaddress.IPv4Address(value))
 
 
+def unwrap(href: str) -> str:
+    """The real target of a link wrapped by a known redirector, read from the link itself.
+
+    Attackers hide a phishing link behind `google.com/url?q=` so it seems to go to
+    google.com; the checks must see the target inside. Parsed only, never followed.
+    """
+    for _ in range(MAX_UNWRAP):
+        inner = _wrapped_target(href)
+        if not inner:
+            break
+        href = inner
+    return href
+
+
+def _wrapped_target(href: str) -> str | None:
+    dest = destination(href)
+    if dest is None or dest.host is None or dest.is_ip:
+        return None
+    try:
+        parts = urlsplit(_clean(href))
+    except ValueError:
+        return None
+    if dest.host in GOOGLE_REDIRECT_HOSTS and parts.path == "/url":
+        keys = ("q", "url")
+    elif dest.host.endswith(SAFELINKS_SUFFIX):
+        keys = ("url",)
+    else:
+        return None
+    params = parse_qs(parts.query)
+    for key in keys:
+        if params.get(key):
+            return params[key][0]
+    return None
+
+
 def extract_links(request: AnalyzeRequest) -> list[tuple[str, str]]:
     """(href, visible text) pairs from the HTML body, then bare URLs in the text body."""
     links: list[tuple[str, str]] = []
@@ -166,7 +215,30 @@ _LOOKALIKE_IDS = {
 }
 
 
+def embedded_urls(href: str) -> list[str]:
+    """Web addresses carried inside a link's query (`?to=https://...`), on any site.
+
+    Any site with an open redirect can forward to them, so they get the destination
+    checks too. They are not trusted as the destination: an attacker could add
+    `?x=https://paypal.com` to their own link as a decoy.
+    """
+    found: list[str] = []
+    pending = [href]
+    while pending and len(found) < MAX_EMBEDDED:
+        try:
+            query = urlsplit(_clean(pending.pop())).query
+        except ValueError:
+            continue
+        for values in parse_qs(query).values():
+            for value in values:
+                if _EMBEDDED_URL.match(value.strip()) and value not in found:
+                    found.append(value)
+                    pending.append(value)
+    return found[:MAX_EMBEDDED]
+
+
 def link_findings(href: str, text: str) -> list[Finding]:
+    href, text = unwrap(href), unwrap(text.strip())
     dest = destination(href)
     if dest is None:
         return []
@@ -182,6 +254,17 @@ def link_findings(href: str, text: str) -> list[Finding]:
     if claimed_site and claimed_site != site and site not in CLICK_TRACKERS:
         findings.append(Finding("link_text_mismatch", (claimed_site, site)))
 
+    findings += _destination_findings(dest, site)
+    for inner in embedded_urls(href):
+        inner_dest = destination(inner)
+        inner_site = _site(inner_dest) if inner_dest else None
+        if inner_dest and inner_site:
+            findings += _destination_findings(inner_dest, inner_site)
+    return list(dict.fromkeys(findings))  # one finding per link, even if repeated inside
+
+
+def _destination_findings(dest: Destination, site: str) -> list[Finding]:
+    findings = []
     if dest.is_ip:
         findings.append(Finding("link_ip", (site,)))
     elif site in SHORTENERS:

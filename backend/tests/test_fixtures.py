@@ -22,4 +22,4 @@ def test_fixture(client: TestClient, path: Path) -> None:
 
 
 def test_fixtures_present() -> None:
-    assert {p.stem for p in FIXTURES} == {"clean", "phishing", "newsletter"}
+    assert {p.stem for p in FIXTURES} == {"clean", "phishing", "newsletter", "wrapped_links"}

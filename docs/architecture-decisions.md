@@ -150,6 +150,12 @@ README.md
 **Decision:** `reasons[].details` may include values the backend has parsed and normalized itself: domains, IP addresses, file extensions, and SPF/DKIM/DMARC results. Each is restricted to a narrow character set (for domains, lowercase IDNA form, `[a-z0-9.-]`) and length-capped. Subjects, body text, display names, full URLs, and filenames are never echoed. `reasons[].text` stays fixed wording from the backend, with counts only.
 **Consequences:** Reasons are concrete and verifiable without becoming a channel for attacker text. The add-on still escapes everything it renders. The no-echo test keeps covering subjects and body text.
 
+## ADR-018: DMARC failure severity follows the domain's policy
+**Status:** Accepted
+**Context:** In the live test (27.10) a genuine Israeli newsletter was marked Suspicious only because Gmail recorded `dmarc=fail`. Many small senders fail DMARC because their mailing service isn't set up for their domain; with policy `p=none` the domain owner asks receivers not to act on that, and Gmail delivers the email normally. Treating every failure as high risk teaches users to ignore the warning.
+**Decision:** `dmarc=fail` stays high when the policy is `quarantine` or `reject`, or when it is missing or unclear. It is medium ("couldn't confirm the sender, common for newsletters") only when both `p` and `sp` are `none`. The policy is read only from the comment Gmail writes right after `dmarc=fail` in its own `mx.google.com` entry; other comments carry sender-controlled text (addresses), so a planted `p=none` there is ignored.
+**Consequences:** Newsletters with a weak DMARC setup score Safe with a visible medium reason instead of Suspicious. An attacker spoofing a `p=none` domain gets medium on the sender check, so the verdict then rests on the link, lookalike, display-name and attachment checks; recorded under Known Limitations.
+
 ---
 
 ## Open Decisions
