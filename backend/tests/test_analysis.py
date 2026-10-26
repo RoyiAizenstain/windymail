@@ -140,3 +140,47 @@ def test_without_key_the_api_is_partial(client: TestClient) -> None:
     assert response.status_code == 200
     assert response.json()["partial"] is True
     assert response.json()["verdict"] == "safe"
+
+
+# What the card is told about the AI check (labels only, ADR-019)
+
+
+def test_ai_section_reports_what_it_found(llm_says) -> None:
+    llm_says(manipulation=["authority", "urgency"], injection=True)
+    result = analyze(request(CEO_FAVOUR))
+    assert result.ai.ran is True
+    assert result.ai.tactics == ["authority", "urgency"]
+    assert result.ai.injection is True
+    assert {r.source for r in result.reasons} == {"ai"}
+
+
+def test_ai_tactics_include_ones_the_rules_also_found(llm_says) -> None:
+    llm_says(manipulation=["urgency", "credentials"])
+    result = analyze(request("Urgent: reply with your password."))
+    assert result.ai.tactics == ["urgency", "credentials"]  # shown as confirmed by the AI
+    assert {r.source for r in result.reasons} == {"rules"}  # but no extra reason or points
+
+
+def test_ai_that_found_nothing(llm_says) -> None:
+    llm_says()
+    result = analyze(request("See you tomorrow."))
+    assert (result.ai.ran, result.ai.tactics, result.ai.injection) == (True, [], False)
+
+
+def test_ai_low_confidence_reports_nothing(llm_says) -> None:
+    llm_says(manipulation=["financial"], confidence="low")
+    result = analyze(request(CEO_FAVOUR))
+    assert (result.ai.ran, result.ai.tactics) == (True, [])
+
+
+def test_ai_did_not_run(llm_says) -> None:
+    llm_says(none=True)
+    result = analyze(request(CEO_FAVOUR))
+    assert result.ai.ran is False and result.partial is True
+
+
+def test_response_json_has_ai_and_source(client: TestClient) -> None:
+    body = json.loads((FIXTURES / "phishing.json").read_text())["request"]
+    data = client.post("/api/v1/analyze", json=body).json()
+    assert data["ai"] == {"ran": False, "tactics": [], "injection": False}
+    assert {r["source"] for r in data["reasons"]} == {"rules"}

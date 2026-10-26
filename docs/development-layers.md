@@ -221,7 +221,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 ---
 
 ## Layer 3: LLM Integration
-**Status:** In progress (27.10). Steps 1-4 done (decisions, ADR-019; rule-based language checks; LLM client; merged into /analyze); Step 5 (card) next.
+**Status:** In progress (27.10). Steps 1-5 done (decisions, ADR-019; rule-based language checks; LLM client; merged into /analyze; AI check section on the card); Step 6 (deploy and live test) next.
 **Stories:** US-04, US-09 · **ADRs:** 003, 004, 005
 
 - [ ] Psychological vector analysis
@@ -272,8 +272,9 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 - Check: all fixtures still pass with the LLM mocked out.
 
 **Step 5: Card**
-- [ ] Add-on validates `manipulation` against the fixed list (unknown values dropped, T8) and shows a short "Pressure tactics" line per type in plain language ("Rushes you to act", "Asks for a password or code")
-- [ ] `logic.test.js` cases for the new field
+- [x] Changed from the plan after review: the card shows that the AI took part and what it found. Backend adds `ai` (`ran`, `tactics`, `injection`, labels only) and `reasons[].source` (`rules`/`ai`); API contract updated in architecture.md. Add-on validates `ai` against the fixed list (unknown values dropped, malformed `ai` ignored, T8) and shows a "🤖 AI check" section in fixed wording ("Rushes you to act", "Claims to come from someone in charge", "Asks for a password, code or sign-in", "Asks for money or payment details", "Tries to give instructions to automated checks"); AI-only reasons labelled "Worth checking · AI check". The model's own text is never shown (ADR-019)
+- [x] `logic.test.js` cases: older backend without `ai`, unknown and duplicate tactics dropped, malformed `ai` not fatal, fixed wording, nothing found, did not run, AI reason label (7 new, 38 add-on checks); backend 6 new (397 total)
+- Note: deploy order: backend first (the add-on tolerates a backend without `ai`, and an older add-on ignores the new fields), then `clasp push`
 - Check: add-on tests pass.
 
 **Step 6: Deploy and live test**

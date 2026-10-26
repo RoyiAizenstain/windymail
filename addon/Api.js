@@ -9,6 +9,7 @@
 var VERDICTS = ['safe', 'suspicious', 'malicious'];
 var MODES = ['organization', 'personal'];
 var SEVERITIES = ['high', 'medium', 'low'];
+var TACTICS = ['urgency', 'authority', 'credentials', 'financial'];
 
 /** Returns a validated result object, or null on any failure. */
 function analyzeMessage(message) {
@@ -138,14 +139,27 @@ function parseAnalyzeResponse(raw) {
         text: r.text,
         severity: SEVERITIES.indexOf(r.severity) === -1 ? null : r.severity,
         details: String(r.details || ''),
+        fromAi: r.source === 'ai',
       };
     });
+
+  // Labels only (ADR-019). Unknown values are dropped; an older backend without
+  // the field simply means no AI section.
+  var ai = raw.ai && typeof raw.ai === 'object' ? raw.ai : {};
+  var tactics = Array.isArray(ai.tactics) ? ai.tactics : [];
 
   return {
     score: score,
     verdict: raw.verdict,
     summary: raw.summary,
     reasons: reasons,
+    ai: {
+      ran: ai.ran === true,
+      tactics: tactics.filter(function (tactic, i) {
+        return TACTICS.indexOf(tactic) !== -1 && tactics.indexOf(tactic) === i;
+      }),
+      injection: ai.injection === true,
+    },
     partial: raw.partial === true,
     mode: raw.mode,
   };

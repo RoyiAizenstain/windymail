@@ -27,6 +27,18 @@ var VERDICT_UI = {
 /** Severity in words, so it never relies on color (ADR-015). */
 var SEVERITY_WORDS = { high: 'High risk', medium: 'Worth checking', low: 'Minor' };
 
+/**
+ * Fixed wording for each label the AI check returns (ADR-019). The model's own text
+ * is never shown: it has just read the attacker's email and could be steered.
+ */
+var AI_TACTIC_WORDS = {
+  urgency: 'Rushes you to act',
+  authority: 'Claims to come from someone in charge',
+  credentials: 'Asks for a password, code or sign-in',
+  financial: 'Asks for money or payment details',
+};
+var AI_INJECTION_WORDS = 'Tries to give instructions to automated checks';
+
 var PARTIAL_LINE = "🌫️ Limited visibility: some checks couldn't run. Verdict based on technical signals only.";
 
 function buildHomepageCard() {
@@ -62,20 +74,54 @@ function buildResultCard(message, result) {
     reasons.addWidget(CardService.newTextParagraph().setText(reasonLine(reason)));
   });
 
+  var aiSection = buildAiSection(result.ai);
+
   var email = CardService.newCardSection()
     .setHeader('Email')
     .addWidget(decorated('From', message.getFrom()))
     .addWidget(decorated('Subject', message.getSubject() || '(no subject)'));
 
-  var card = newCard('Email check').addSection(verdict).addSection(reasons).addSection(email);
+  var card = newCard('Email check').addSection(verdict).addSection(reasons);
+  if (aiSection) card.addSection(aiSection);
+  card.addSection(email);
   if (result.reasons.length > 0) card.addSection(buildDetailsSection(result.reasons));
   return card.build();
 }
 
-/** "<b>High risk:</b> text". The severity word comes from a fixed map, never the backend. */
+/**
+ * "<b>High risk:</b> text", or "<b>Worth checking · AI check:</b> text" for reasons
+ * only the AI check found. Labels come from fixed maps, never the backend.
+ */
 function reasonLine(reason) {
   var word = SEVERITY_WORDS[reason.severity];
-  return (word ? '<b>' + word + ':</b> ' : '• ') + toPlainText(reason.text);
+  var label = word && reason.fromAi ? word + ' · AI check' : word;
+  return (label ? '<b>' + label + ':</b> ' : '• ') + toPlainText(reason.text);
+}
+
+/** What the AI check found, in fixed wording; empty when it didn't run. */
+function aiLines(ai) {
+  if (!ai || !ai.ran) return [];
+  var found = ai.tactics
+    .filter(function (tactic) {
+      return AI_TACTIC_WORDS.hasOwnProperty(tactic);
+    })
+    .map(function (tactic) {
+      return '• ' + AI_TACTIC_WORDS[tactic];
+    });
+  if (ai.injection) found.push('• ' + AI_INJECTION_WORDS);
+  if (found.length === 0) return ['The AI check read this email and found no pressure tactics.'];
+  return ['The AI check read this email and found:'].concat(found);
+}
+
+/** "🤖 AI check" section, so the user sees the AI took part and what it found. */
+function buildAiSection(ai) {
+  var lines = aiLines(ai);
+  if (lines.length === 0) return null;
+  var section = CardService.newCardSection().setHeader('🤖 AI check');
+  lines.forEach(function (line) {
+    section.addWidget(CardService.newTextParagraph().setText(toPlainText(line)));
+  });
+  return section;
 }
 
 /** Collapsed analyst view (US-10): what each check found, in technical terms. */

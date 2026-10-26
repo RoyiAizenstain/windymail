@@ -9,7 +9,7 @@ never subtract. Without an LLM answer the result is the rules' alone, marked par
 
 from app import llm
 from app.config import get_settings
-from app.models import AnalyzeRequest, AnalyzeResponse, Manipulation, Reason
+from app.models import AiCheck, AnalyzeRequest, AnalyzeResponse, Manipulation, Reason
 from app.scoring import combined_score
 from app.signals import language
 from app.signals.base import Finding
@@ -41,10 +41,17 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
 
     verdict = llm.classify(request)
     llm_reasons: list[Reason] = []
+    ai = AiCheck(ran=verdict is not None)
     if verdict:
-        llm_reasons = to_reasons(llm_findings(verdict, rule_tactics, rule_reasons))
+        llm_reasons = [
+            reason.model_copy(update={"source": "ai"})
+            for reason in to_reasons(llm_findings(verdict, rule_tactics, rule_reasons))
+        ]
         if verdict.confidence != "low":
             tactics += [tactic for tactic in verdict.manipulation if tactic not in tactics]
+            ai = AiCheck(
+                ran=True, tactics=verdict.manipulation, injection=verdict.injection_attempt
+            )
 
     reasons = sort_reasons(rule_reasons + llm_reasons)
     score = combined_score(rule_reasons, llm_reasons)
@@ -54,6 +61,7 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
         summary=summarize(reasons),
         reasons=reasons,
         manipulation=tactics,
+        ai=ai,
         partial=verdict is None,
         mode=get_settings().mode,
     )

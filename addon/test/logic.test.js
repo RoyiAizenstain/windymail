@@ -35,4 +35,11 @@ t('reason line without severity', () => assert.equal(ctx.reasonLine({text:'x', s
 t('escapes html', () => assert.equal(ctx.toPlainText('<a href="x">pay</a> & co'), '&lt;a href=&quot;x&quot;&gt;pay&lt;/a&gt; &amp; co'));
 t('truncates display', () => assert.equal(ctx.toPlainText('x'.repeat(500)).length, 201));
 t('null safe', () => assert.equal(ctx.toPlainText(null), ''));
+t('ai section absent on older backend', () => { const r = ctx.parseAnalyzeResponse(good); assert.equal(r.ai.ran,false); assert.deepEqual(ctx.aiLines(r.ai), []); });
+t('ai tactics validated against fixed list', () => { const r = ctx.parseAnalyzeResponse({...good, ai:{ran:true, tactics:['urgency','<b>x</b>','urgency','authority'], injection:'yes'}}); assert.deepEqual(Array.from(r.ai.tactics), ['urgency','authority']); assert.equal(r.ai.injection,false); });
+t('ai malformed is ignored, not fatal', () => { for (const ai of [null,'x',5,{ran:'true'},{ran:true,tactics:'urgency'}]) { const r = ctx.parseAnalyzeResponse({...good, ai}); assert.ok(r.score === 42); } });
+t('ai lines use fixed wording', () => assert.deepEqual(Array.from(ctx.aiLines({ran:true, tactics:['authority','financial'], injection:true})), ['The AI check read this email and found:','• Claims to come from someone in charge','• Asks for money or payment details','• Tries to give instructions to automated checks']));
+t('ai found nothing', () => assert.deepEqual(Array.from(ctx.aiLines({ran:true, tactics:[], injection:false})), ['The AI check read this email and found no pressure tactics.']));
+t('ai did not run', () => assert.deepEqual(Array.from(ctx.aiLines({ran:false, tactics:['urgency'], injection:true})), []));
+t('ai reason labelled', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'Pressure', severity:'medium', source:'ai'},{text:'Link', severity:'high', source:'evil'}]}); assert.equal(ctx.reasonLine(r.reasons[0]), '<b>Worth checking · AI check:</b> Pressure'); assert.equal(ctx.reasonLine(r.reasons[1]), '<b>High risk:</b> Link'); });
 console.log('addon logic checks passed: ' + n);

@@ -45,6 +45,16 @@ class Reason(StrictModel):
     severity: Severity
     text: str
     details: str
+    # Which check found it, so the card can say the AI check helped (ADR-019).
+    source: Literal["rules", "ai"] = "rules"
+
+
+class AiCheck(StrictModel):
+    """What the AI check found, as labels only; the card words them (ADR-019)."""
+
+    ran: bool
+    tactics: list[Manipulation] = Field(default_factory=list)
+    injection: bool = False
 
 
 class Herd(StrictModel):
@@ -58,6 +68,7 @@ class AnalyzeResponse(StrictModel):
     summary: str
     reasons: list[Reason]
     manipulation: list[Manipulation]
+    ai: AiCheck = Field(default_factory=lambda: AiCheck(ran=False))
     herd: Herd | None = None
     partial: bool = False
     mode: Mode
