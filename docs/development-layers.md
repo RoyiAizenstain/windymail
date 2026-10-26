@@ -296,4 +296,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 ## Future Work (documented in README, not built)
 * Deep Scan with URL reputation lookups (US-05)
 * Automatic SOC escalation (US-08)
-* Attachment content analysis
+* Attachment checks beyond the filename, in two levels (27.10, deferred for the deadline):
+  * **Level 1, backend only, data already received:** more risky types now used in attacks (`.one`, `.xll`, `.chm`, `.url`, `.appx`, `.msix`, `.iqy`, `.slk`, `.library-ms`); declared MIME type contradicting the name (an `application/x-msdownload` file named `.pdf`) → high.
+  * **Level 2, add-on inspects inside Gmail, sends only facts:** real file type from the first bytes (`MZ` program named `.pdf`) → high; file types listed inside zip archives (`.exe` inside `invoice.zip`) → high; password-protected archive (scanners can't open it, the password sits in the body) → medium to high. Contents never leave Gmail; size-capped for Apps Script time and memory limits; needs a schema change, so backend deploys before `clasp push`.
+  * Level 3, file hash lookup (VirusTotal, hash only, never upload) belongs with Deep Scan.
