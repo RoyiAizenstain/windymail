@@ -14,7 +14,7 @@
   "addOns": {
     "common": {
       "name": "WindyMail",
-      "logoUrl": "https://www.gstatic.com/images/icons/material/system/1x/air_black_48dp.png",
+      "logoUrl": "https://www.gstatic.com/images/icons/material/system/2x/air_googblue_48dp.png",
       "layoutProperties": {
         "primaryColor": "#1a73e8"
       },
