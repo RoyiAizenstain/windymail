@@ -1,0 +1,34 @@
+{
+  "timeZone": "Asia/Jerusalem",
+  "exceptionLogging": "STACKDRIVER",
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/gmail.addons.execute",
+    "https://www.googleapis.com/auth/gmail.addons.current.message.readonly",
+    "https://www.googleapis.com/auth/script.external_request",
+    "openid"
+  ],
+  "urlFetchWhitelist": [
+    "https://windymail-backend.onrender.com/"
+  ],
+  "addOns": {
+    "common": {
+      "name": "WindyMail",
+      "logoUrl": "https://www.gstatic.com/images/icons/material/system/1x/air_black_48dp.png",
+      "layoutProperties": {
+        "primaryColor": "#1a73e8"
+      },
+      "homepageTrigger": {
+        "runFunction": "onHomepage"
+      }
+    },
+    "gmail": {
+      "contextualTriggers": [
+        {
+          "unconditional": {},
+          "onTriggerFunction": "onGmailMessageOpen"
+        }
+      ]
+    }
+  }
+}
