@@ -108,18 +108,18 @@ One step at a time; each step ends with its own check before the next starts. **
 ---
 
 ## Layer 2: Deterministic Signal Engine
-**Status:** In progress (Steps 1-7 done; Step 8 code done, live Gmail test waits on `clasp push` and test emails)
+**Status:** In progress (26.10). Steps 1-7 done and live on the backend; Step 8 code done, live Gmail test waits on `clasp push`; Step 9 (README, threat model) not started.
 **Stories:** US-02, US-03, US-10
 
-- [ ] Add-on extracts headers, body (text + HTML), attachment metadata
-- [ ] Sender authentication results (SPF, DKIM, DMARC) from `Authentication-Results`
-- [ ] Display name vs address mismatch; Reply-To vs From mismatch
-- [ ] Lookalike domains
-- [ ] Link text vs destination mismatch; IP links; URL shorteners
-- [ ] Risky attachment extensions
-- [ ] Hidden text in HTML
-- [ ] Plain-language reason for every finding
-- [ ] Unit test per signal
+- [x] Add-on extracts headers, body (text + HTML), attachment metadata
+- [x] Sender authentication results (SPF, DKIM, DMARC) from `Authentication-Results`
+- [x] Display name vs address mismatch; Reply-To vs From mismatch
+- [x] Lookalike domains
+- [x] Link text vs destination mismatch; IP links; URL shorteners
+- [x] Risky attachment extensions
+- [x] Hidden text in HTML
+- [x] Plain-language reason for every finding
+- [x] Unit test per signal
 - [ ] README: signals section
 
 **Done when:** a phishing test email shows concrete, correct reasons.
@@ -136,7 +136,8 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 - [x] `buildAnalyzeRequest`: `auth_results` from `message.getHeader('Authentication-Results')`; `body_text` from `getPlainBody()`; `body_html` from `getBody()`; attachments as metadata only (`getName`, `getContentType`, `getSize`), contents never sent
 - [x] Size budget: serialized payload kept under 190 KB (measured in UTF-8 bytes, not characters), trimming `body_html` first, then `body_text`; new request field `truncated: bool` so the backend knows (schema, models.py and architecture.md updated together)
 - [x] `logic.test.js` (27 checks): request building with body, attachments, oversized body trimmed to the budget (multibyte and emoji included, never splitting a surrogate pair), `truncated` set; backend accepts `truncated` (41 tests)
-- [ ] Deploy order: backend first (it rejects unknown fields, so an add-on sending `truncated` to the old backend gets 422), then **You:** `clasp push`
+- [x] Deploy order, backend first (it rejects unknown fields, so an add-on sending `truncated` to the old backend gets 422): backend live on Render (26.10, 18:35)
+- [ ] **You:** `git pull`, then `clasp push` the add-on
 - Check: a long newsletter still gets a card; the request on Render stays under 200 KB.
 - Note: truncation is an evasion path (padding pushes a link past the cut). It becomes a finding ("Too long to check fully", low), not a silent gap, and is listed under Known Limitations.
 
@@ -196,7 +197,10 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 **Step 8: Card and live test**
 - [x] Each reason shows a severity word ("High risk", "Worth checking", "Minor") before its text, so severity never relies on color (ADR-015)
 - [x] Collapsible "Technical details" section (US-10): each reason's `details` (auth results appear there when they fail), collapsed by default; unknown severities from the backend are dropped to no word (T8); 31 add-on checks
-- [ ] Deploy; **You:** send test emails to the demo account: a clean personal email; a phishing-style one (display name "PayPal Security", Reply-To on another domain, link text `paypal.com` pointing at a shortener, `.html` attachment); a long newsletter
+- [x] Backend with all Layer 2 checks deployed and live on Render (`69ac515`, 26.10, 19:10)
+- [x] Phishing test email sent via the Gmail connector from and to royi.aizen@gmail.com, subject "[WindyMail test] Phishing: your account is limited": link text `www.paypal.com` going to `example.org`, a link to `http://3232235777/` (192.168.1.1), a hidden link, `Account-Review.html` attachment; only reserved or private addresses. Expected about 80, Malicious. Sent from a real Gmail address, so the display-name, Reply-To and lookalike-sender checks are not exercised here (they are in the JSON fixture)
+- [ ] Clean test email: the connector send was blocked by the session's permission check; any normal personal email in the inbox serves instead
+- [ ] **You:** `clasp push` (Step 2), then open in Gmail: the phishing test email (forward it to the demo account if that is a different account), a normal personal email, a long newsletter; expand "Technical details" once; report what each card shows
 - [x] JSON copies of the same cases in `backend/tests/fixtures/` as end-to-end API tests (clean → Safe, no reasons; phishing → Malicious, 6 reasons; newsletter → Safe, only "too long"); 259 backend tests
 - Check: the phishing email shows concrete, correct reasons in Gmail; the clean email shows Safe; the newsletter is not flagged for hidden text.
 
