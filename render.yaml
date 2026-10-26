@@ -16,3 +16,6 @@ services:
         value: 3.12.10
       - key: ENABLE_API_DOCS
         value: "false"
+      # Required: expected "aud" of the add-on's ID token (ADR-011). Set in the dashboard.
+      - key: GOOGLE_CLIENT_ID
+        sync: false
