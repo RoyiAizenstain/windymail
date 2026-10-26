@@ -14,10 +14,11 @@ so Hebrew phrases match anywhere; English ones match whole words.
 import re
 import unicodedata
 
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 
 from app.models import AnalyzeRequest, Manipulation
 from app.signals.base import Finding
+from app.signals.hidden import is_hidden
 
 
 def _en(*phrases: str) -> re.Pattern[str]:
@@ -111,6 +112,20 @@ def email_text(request: AnalyzeRequest) -> str:
     return normalize(" ".join(parts))
 
 
+def hidden_text(request: AnalyzeRequest) -> str:
+    """Text hidden from the reader with inline styles (same rules as `hidden.py`), normalized."""
+    if not request.body_html:
+        return ""
+    soup = BeautifulSoup(request.body_html, "html.parser")
+    parts = [element.get_text(" ") for element in soup.find_all(style=True)
+             if isinstance(element, Tag) and is_hidden(str(element["style"]))]  # fmt: skip
+    return normalize(" ".join(parts))
+
+
+def _has_ai_instructions(text: str) -> bool:
+    return any(pattern.search(text) for pattern in AI_INSTRUCTIONS)
+
+
 def tactics(text: str) -> list[Manipulation]:
     """Pressure tactics found, in a fixed order."""
     return [label for label, patterns in PHRASES.items()
@@ -135,6 +150,10 @@ def check(request: AnalyzeRequest) -> list[Finding]:
         strong = PRESSURE.intersection(found) and REQUEST.intersection(found)
         finding_id = "manipulation_strong" if strong else "manipulation"
         findings.append(Finding(finding_id, tuple(found)))
-    if any(pattern.search(text) for pattern in AI_INSTRUCTIONS):
+    # Hidden from the reader and addressed to a scanner: no legitimate email does this.
+    # Visible phrasing can be legitimate (a newsletter about AI attacks), so it scores less.
+    if _has_ai_instructions(hidden_text(request)):
+        findings.append(Finding("ai_instructions_hidden"))
+    elif _has_ai_instructions(text):
         findings.append(Finding("ai_instructions"))
     return findings

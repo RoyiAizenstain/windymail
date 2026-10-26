@@ -225,6 +225,13 @@ CATALOG: dict[str, Message] = {
         "That combination is typical of scams.",
         details="Pressure tactics found by phrase",
     ),
+    "ai_instructions_hidden": Message(
+        category="content",
+        severity="high",
+        text="This email hides instructions aimed at AI tools from you, a deliberate trick to "
+        "fool automated checks.",
+        details="Phrases addressed to an AI or a scanner, inside content hidden with inline styles",
+    ),
     "ai_instructions": Message(
         category="content",
         severity="medium",

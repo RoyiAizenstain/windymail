@@ -246,7 +246,7 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 
 **Step 2: Deterministic language checks (no LLM)**
 - [x] `signals/language.py`: phrase lists in English and Hebrew for urgency ("within 24 hours", "תוך 24 שעות"), threats ("account suspended"), credential requests (password, code, "verify your account") and payment requests (wire transfer, gift cards)
-- [x] Injection phrases → `ai_instructions` finding (medium); subject, plain body and all HTML text (hidden included) checked
+- [x] Injection phrases: `ai_instructions_hidden` (high) when inside content hidden with inline styles, since no legitimate email hides a message for a scanner; `ai_instructions` (medium) when visible, since a newsletter about AI attacks can quote them. Subject, plain body and all HTML text checked; 348 backend tests
 - [x] Fills the response's `manipulation` list. Severity changed from the plan: low (`manipulation`) for any tactic alone; medium (`manipulation_strong`) when pressure (urgency or authority) comes with a request (credentials or money), the scam formula. Self-contained, and one-time-code emails or invoices stay low
 - [x] Tests per phrase family, both languages, evasion (zero-width characters, Hebrew vowel marks and prefixes, gershayim), ordinary emails that must not trigger, injection in hidden text (63 new, 342 total)
 - Note: this is the ADR-005 safety net: with the LLM down, social engineering is still caught
