@@ -25,7 +25,7 @@ README is written along the way: each layer adds its section.
 ---
 
 ## Layer 1: End-to-End Skeleton
-**Status:** In progress (Steps 1-6 done, Step 7 next)
+**Status:** Done (26.10). Opening an email in Gmail shows the mock verdict from the deployed, authenticated backend.
 **Stories:** US-01, US-12 · **ADRs:** 001, 002, 006, 012
 
 - [x] Apps Script add-on with contextual trigger on message open
@@ -34,7 +34,7 @@ README is written along the way: each layer adds its section.
 - [x] Backend deployed to Render free tier (ADR-012)
 - [x] `GET /health` endpoint (unauthenticated, fixed response) + external keep-warm ping every 5 minutes
 - [x] Minimal OAuth scopes in `appsscript.json` (including `openid`)
-- [ ] Verify early that `ScriptApp.getIdentityToken()` returns a token the backend can validate (ADR-011)
+- [x] Verify early that `ScriptApp.getIdentityToken()` returns a token the backend can validate (ADR-011)
 - [x] Config loaded from environment, `.env.example` committed
 - [x] Public repo created; README skeleton
 
@@ -91,16 +91,19 @@ One step at a time; each step ends with its own check before the next starts. **
 - Check: opening an email shows the mock result from the deployed backend.
 
 **Step 7: Identity token verification (ADR-011)**
-- [ ] Add-on sends `Authorization: Bearer <ScriptApp.getIdentityToken()>` on every call
-- [ ] Find the audience safely: decode the token payload inside Apps Script and log **only** the `aud` claim, never the token; set it as `GOOGLE_CLIENT_ID` on Render
-- [ ] Backend dependency verifies signature, issuer, expiry and audience with `google-auth`; any failure → 401; applied to `/analyze` now and `/report` when it exists
-- [ ] Tests: missing token → 401, invalid token → 401 (verification mocked)
+- [x] Add-on sends `Authorization: Bearer <ScriptApp.getIdentityToken()>` on every call; no token → error card, no request
+- [x] Audience found safely with `logTokenAudience()` ([addon/Diagnostics.js](../addon/Diagnostics.js)): logs only `aud`, never the token; set as `GOOGLE_CLIENT_ID` on Render via the connector
+- [x] Backend dependency ([backend/app/auth.py](../backend/app/auth.py)) verifies signature, issuer, expiry and audience with `google-auth`; any failure → 401 with no detail; cert fetch failure → 503; 5 s timeout on the cert fetch; applied to `/analyze` now and `/report` when it exists
+- [x] Fail closed: backend refuses to start without `GOOGLE_CLIENT_ID`
+- [x] Tests (16 new, 38 total): missing, malformed, forged token → 401; case-insensitive scheme; audience passed to verifier; token without `sub` → 401; cert outage → 503; `/health` open; startup fails without client ID. Real verifier checked by hand: garbage tokens raise errors that map to 401, not 500
+- [x] Live check: no token, forged token, wrong scheme → 401; `/health` 200; Gmail card still works (Render logs: `200 OK` from the add-on after the auth deploy)
+- Note: Render logs show the end user's IP for add-on requests (forwarded by Google), not a Google IP. Covered by the Layer 4 logging-hygiene task.
 - Check: the card still works from Gmail; `curl` without a token gets 401.
 - Note: verification is pulled forward from Layer 4 so the deployed backend is never open. Layer 4 adds rate limiting, size limits and the remaining tests.
 
 **Step 8: Close the layer**
-- [ ] README: what WindyMail is, architecture overview, how to run locally and deploy
-- [ ] Tick the boxes above, set Layer 1 status to Done
+- [x] README: what WindyMail is, architecture overview, how to run locally and deploy
+- [x] Tick the boxes above, set Layer 1 status to Done
 
 ---
 
@@ -141,7 +144,7 @@ One step at a time; each step ends with its own check before the next starts. **
 **Status:** Not started
 **Stories:** US-11 · **ADRs:** 011
 
-- [ ] Google ID token verification on `/analyze` and `/report` (built in Layer 1, Step 7; confirm `/report` is covered)
+- [ ] Google ID token verification on `/analyze` and `/report` (`/analyze` done in Layer 1, Step 7; confirm `/report` is covered when it is built)
 - [ ] Hashed user ID; per-user rate limiting
 - [ ] Payload size limits and strict schema
 - [ ] Timeouts on outbound calls
