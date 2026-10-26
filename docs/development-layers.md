@@ -221,14 +221,14 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 ---
 
 ## Layer 3: LLM Integration
-**Status:** In progress (27.10). Steps 1-5 done (decisions, ADR-019; rule-based language checks; LLM client; merged into /analyze; AI check section on the card); Step 6 (deploy and live test) next.
+**Status:** Done (27.10), one live check open. LLM live on Render (Haiku, 1.5-2.4 s), AI check section verified in Gmail. The "done when" case (an injection line never lowers the score) is covered by automated tests on the phishing fixtures; the live A/B injection email test is not yet reported.
 **Stories:** US-04, US-09 · **ADRs:** 003, 004, 005
 
-- [ ] Psychological vector analysis
-- [ ] Injection defenses per ADR-004
-- [ ] Fallback per ADR-005
-- [ ] Injection and LLM-failure tests
-- [ ] README: LLM safety section
+- [x] Psychological vector analysis
+- [x] Injection defenses per ADR-004
+- [x] Fallback per ADR-005
+- [x] Injection and LLM-failure tests
+- [x] README: LLM safety section
 
 **Done when:** the prompt-injection test email does not lower the score.
 
@@ -285,9 +285,9 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 - Check: injection email does not score lower; the pressure email shows its tactics; with `LLM_ENABLED=false` the card shows "Limited visibility" and still a verdict.
 
 **Step 7: Close the layer**
-- [ ] README: LLM safety section (what is sent, what comes back, why labels only, the cap, the fallback)
-- [ ] threat-model.md: T1 and T7 mitigations updated; Known Limitations: masking is best-effort, email text goes to Anthropic
-- [ ] Tick the boxes above, set Layer 3 status to Done
+- [x] README: LLM safety section (what is sent, what comes back, why labels only, the cap, the fallback)
+- [x] threat-model.md: T1 and T7 mitigations updated; Known Limitations: masking is best-effort, email text goes to Anthropic, Haiku is the least robust model, phrase lists cover English and Hebrew only
+- [x] Tick the boxes above, set Layer 3 status to Done
 
 ---
 
