@@ -1,6 +1,6 @@
 """WindyMail backend: FastAPI entry point.
 
-/analyze runs the deterministic checks (Layer 2) and scores them provisionally
+/analyze runs the deterministic checks (Layers 2-3) and scores them provisionally
 (ADR-010). Reasons use fixed wording; only normalized values are echoed (ADR-017).
 """
 
@@ -12,6 +12,7 @@ from app.auth import require_user
 from app.config import get_settings
 from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse
 from app.scoring import provisional_score
+from app.signals import language
 from app.signals.engine import run_checks, summarize
 from app.verdict import verdict_for
 
@@ -43,7 +44,7 @@ def create_app() -> FastAPI:
             verdict=verdict_for(score),
             summary=summarize(reasons),
             reasons=reasons,
-            manipulation=[],
+            manipulation=language.labels(request),
             mode=get_settings().mode,
         )
 

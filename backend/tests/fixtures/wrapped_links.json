@@ -22,7 +22,8 @@
       "link_text_mismatch",
       "link_ip",
       "attachment_web_page",
-      "hidden_link"
+      "hidden_link",
+      "manipulation_strong"
     ]
   }
 }

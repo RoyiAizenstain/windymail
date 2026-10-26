@@ -212,6 +212,26 @@ CATALOG: dict[str, Message] = {
         text="This email contains a large block of text hidden from view.",
         details="Letters and digits hidden with inline styles",
     ),
+    "manipulation": Message(
+        category="manipulation",
+        severity="low",
+        text="This email uses wording often used to pressure people.",
+        details="Pressure tactics found by phrase",
+    ),
+    "manipulation_strong": Message(
+        category="manipulation",
+        severity="medium",
+        text="This email pressures you and asks for a password, code or money. "
+        "That combination is typical of scams.",
+        details="Pressure tactics found by phrase",
+    ),
+    "ai_instructions": Message(
+        category="content",
+        severity="medium",
+        text="This email contains instructions aimed at AI tools, a trick to fool automated "
+        "checks.",
+        details="Phrases addressed to an AI or a scanner",
+    ),
     "body_truncated": Message(
         category="content",
         severity="low",

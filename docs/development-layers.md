@@ -221,7 +221,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 ---
 
 ## Layer 3: LLM Integration
-**Status:** In progress (27.10). Step 1 (decisions, ADR-019) done; Step 2 next.
+**Status:** In progress (27.10). Steps 1-2 done (decisions, ADR-019; rule-based language checks); Step 3 (LLM client) next.
 **Stories:** US-04, US-09 · **ADRs:** 003, 004, 005
 
 - [ ] Psychological vector analysis
@@ -245,12 +245,14 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 - Note: Sonnet 5.5 was considered for stronger judgement on subtle manipulation; Haiku kept (ADR-016) for speed and cost, since the labels-only contract and the cap carry the security guarantee. Model name is a setting.
 
 **Step 2: Deterministic language checks (no LLM)**
-- [ ] `signals/language.py`: phrase lists in English and Hebrew for urgency ("within 24 hours", "תוך 24 שעות"), threats ("account suspended"), credential requests (password, code, "verify your account") and payment requests (wire transfer, gift cards)
-- [ ] Injection phrases → `ai_instructions` finding (medium); visible and hidden text both checked
-- [ ] Fills the response's `manipulation` list; low severity alone, medium when combined with a link or attachment finding
-- [ ] Tests per phrase family, both languages, plus ordinary emails that must not trigger (a meeting "tomorrow", a receipt)
+- [x] `signals/language.py`: phrase lists in English and Hebrew for urgency ("within 24 hours", "תוך 24 שעות"), threats ("account suspended"), credential requests (password, code, "verify your account") and payment requests (wire transfer, gift cards)
+- [x] Injection phrases → `ai_instructions` finding (medium); subject, plain body and all HTML text (hidden included) checked
+- [x] Fills the response's `manipulation` list. Severity changed from the plan: low (`manipulation`) for any tactic alone; medium (`manipulation_strong`) when pressure (urgency or authority) comes with a request (credentials or money), the scam formula. Self-contained, and one-time-code emails or invoices stay low
+- [x] Tests per phrase family, both languages, evasion (zero-width characters, Hebrew vowel marks and prefixes, gershayim), ordinary emails that must not trigger, injection in hidden text (63 new, 342 total)
 - Note: this is the ADR-005 safety net: with the LLM down, social engineering is still caught
-- Check: tests pass; existing fixtures unchanged.
+- Note: the two phishing fixtures now also get `manipulation_strong` ("within 24 hours" + "confirm your details"); expectations updated
+- Note: matching runs on normalized text (NFKC, format characters and combining marks removed, case folded); Hebrew phrases match without word boundaries because prefixes attach (`והסיסמה`)
+- Check: tests pass.
 
 **Step 3: LLM client** (`app/llm.py`)
 - [ ] Official `anthropic` SDK, pinned; key from `ANTHROPIC_API_KEY`; structured output validated against a Pydantic model (strict: unknown fields or values rejected)
