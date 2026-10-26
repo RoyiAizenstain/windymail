@@ -25,8 +25,17 @@ def _env_str(name: str) -> str | None:
     return raw or None
 
 
+def _env_required(name: str) -> str:
+    value = _env_str(name)
+    if value is None:
+        # Fail closed: without it, tokens cannot be checked against our audience.
+        raise RuntimeError(f"{name} must be set")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
+    google_client_id: str
     soc_webhook_url: str | None
     enable_api_docs: bool
 
@@ -39,6 +48,7 @@ class Settings:
 @lru_cache
 def get_settings() -> Settings:
     return Settings(
+        google_client_id=_env_required("GOOGLE_CLIENT_ID"),
         soc_webhook_url=_env_str("SOC_WEBHOOK_URL"),
         enable_api_docs=_env_bool("ENABLE_API_DOCS", default=False),
     )

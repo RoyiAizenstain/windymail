@@ -3,6 +3,7 @@ from fastapi.testclient import TestClient
 
 from app.main import create_app
 from app.models import AnalyzeResponse
+from tests.conftest import AUTH_HEADERS
 
 ANALYZE = "/api/v1/analyze"
 
@@ -59,7 +60,7 @@ def test_organization_mode_when_webhook_configured(
     monkeypatch: pytest.MonkeyPatch, valid_request: dict
 ) -> None:
     monkeypatch.setenv("SOC_WEBHOOK_URL", "https://soc.example.com/hook")
-    client = TestClient(create_app())
+    client = TestClient(create_app(), headers=AUTH_HEADERS)
     assert client.post(ANALYZE, json=valid_request).json()["mode"] == "organization"
 
 

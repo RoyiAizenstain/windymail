@@ -11,11 +11,19 @@ var MODES = ['organization', 'personal'];
 
 /** Returns a validated result object, or null on any failure. */
 function analyzeMessage(message) {
+  // Google-signed ID token proving the user's identity to the backend (ADR-011).
+  var token = ScriptApp.getIdentityToken();
+  if (!token) {
+    console.error('WindyMail: no identity token (openid scope missing?)');
+    return null;
+  }
+
   var response;
   try {
     response = UrlFetchApp.fetch(BACKEND_BASE_URL + '/api/v1/analyze', {
       method: 'post',
       contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + token },
       payload: JSON.stringify(buildAnalyzeRequest(message)),
       muteHttpExceptions: true,
       followRedirects: false,

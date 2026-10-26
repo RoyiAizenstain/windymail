@@ -4,8 +4,11 @@ Layer 1: /analyze returns a fixed mock in the final response schema. Nothing fro
 the request is echoed back.
 """
 
-from fastapi import FastAPI
+from typing import Annotated
 
+from fastapi import Depends, FastAPI
+
+from app.auth import require_user
 from app.config import get_settings
 from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse, Reason
 from app.verdict import verdict_for
@@ -29,7 +32,9 @@ def create_app() -> FastAPI:
         return HealthResponse(status="ok")
 
     @app.post("/api/v1/analyze")
-    def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
+    def analyze(
+        request: AnalyzeRequest, user_id: Annotated[str, Depends(require_user)]
+    ) -> AnalyzeResponse:
         return AnalyzeResponse(
             score=MOCK_SCORE,
             verdict=verdict_for(MOCK_SCORE),
