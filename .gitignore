@@ -1,0 +1,31 @@
+# Secrets: never commit (ADR-011)
+.env
+.env.*
+!.env.example
+.clasprc.json
+
+# Original assignment brief: kept local, not published
+docs/assignment.md
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Local data (Herd Immunity store, if built)
+*.sqlite
+*.db
+
+# Node / clasp tooling
+node_modules/
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
