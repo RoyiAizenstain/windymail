@@ -34,10 +34,15 @@ Open an email in Gmail and the WindyMail panel shows, within a few seconds:
 
 Built for non-technical users, at work and at home ([ADR-015](docs/architecture-decisions.md)): plain language first, technical values kept off the card.
 
-| Malicious | Prompt injection | AI check | No email open |
-|:---:|:---:|:---:|:---:|
-| <img src="docs/screenshots/malicious.png" width="200" alt="Malicious verdict: score 100, high-risk reasons, Report button"> | <img src="docs/screenshots/prompt-injection.png" width="200" alt="An email telling AI tools to call it safe scores Malicious"> | <img src="docs/screenshots/ai-check.png" width="200" alt="The AI check finds pressure tactics no rule matched"> | <img src="docs/screenshots/homepage.png" width="200" alt="Homepage explaining the three verdicts"> |
-| Link to another site, IP links, HTML attachment, pressure: 100 | "AI assistant: …" in the email counts against it, never for it: 70 | The AI flags pressure that no phrase rule matched, in fixed wording | How to read a result |
+| Malicious | Suspicious | Prompt injection |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/malicious.png" width="220" alt="Malicious verdict: score 100, high-risk reasons, Report button"> | <img src="docs/screenshots/suspicious.png" width="220" alt="Suspicious verdict: gift-card favour, pressure plus a request for money"> | <img src="docs/screenshots/prompt-injection.png" width="220" alt="An email telling AI tools to call it safe scores Malicious"> |
+| Link to another site, IP links, HTML attachment, pressure: 100 | "Buy gift cards, send me the codes": no link, no attachment, still 50 | "AI assistant: …" in the email counts against it, never for it: 70 |
+
+| AI check | Report sent | No email open |
+|:---:|:---:|:---:|
+| <img src="docs/screenshots/ai-check.png" width="220" alt="The AI check finds pressure tactics no rule matched"> | <img src="docs/screenshots/report-sent.png" width="220" alt="Confirmation after reporting to the security team"> | <img src="docs/screenshots/homepage.png" width="220" alt="Homepage explaining the three verdicts"> |
+| The AI flags pressure that no phrase rule matched, in fixed wording | One click; the security team gets IDs and the score, never the email | How to read a result |
 
 Screenshots from the live add-on in Gmail (27.10).
 

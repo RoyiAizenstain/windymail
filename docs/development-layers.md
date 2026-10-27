@@ -464,7 +464,9 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 - [x] Safe, organization mode (27.10): wordmark, banner, score line, one reason, AI check; white top bar readable
 - [x] Malicious, organization mode, final look (27.10): centered wordmark with a line under it, colored severity labels, blue Report button in the footer, white top bar
 - [x] AI check colors and the homepage (27.10, Playwright screenshots)
-- [ ] **You:** a Suspicious email (demo email 2); personal mode optional
+- [x] Suspicious (27.10): demo email 2 sent to self, 50, pressure plus money request, three AI tags
+- [x] Report sent from Gmail again; confirmation card now starts with the wordmark
+- Personal mode: optional, not checked
 - README screenshots: moved to Layer 7 (taken once, after the final look)
 
 **Done when:** all three verdicts and both modes look right in Gmail, tests pass. (Screenshots: Layer 7.)
@@ -474,7 +476,7 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 ## Layer 7: Demo & Final README
 **Status:** In progress (27.10). Done: README, demo script, secrets check. Remaining (You): demo emails, fallback recording
 
-- [x] Screenshots for README (27.10): Malicious, prompt injection, AI check, homepage; taken with Playwright from a separate Chrome profile the user signed in to by hand; panel only, never the inbox ([docs/screenshots/](screenshots/))
+- [x] Screenshots for README (27.10): Malicious, Suspicious, prompt injection, AI check, report sent, homepage; taken with Playwright from a separate Chrome profile the user signed in to by hand; panel only, never the inbox ([docs/screenshots/](screenshots/))
 - [ ] Demo email set prepared in the demo account
 - [x] Demo script ([demo-script.md](demo-script.md)): demo emails that survive real sending, 7-minute flow, failure handling, likely questions
 - [ ] Fallback recording
