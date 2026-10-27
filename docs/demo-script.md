@@ -8,10 +8,10 @@ About 7 minutes, then questions. Live in Gmail, with the README screenshots as t
 
 | # | Expected | Email in the inbox | Why it scores that way |
 |---|---|---|---|
-| 1 | ☀️ Safe (20) | "Quick one": "Are you at your desk? I need a small favour before the board meeting." | No request yet, so no rule fires beyond a minor one; the AI still tags the pressure. |
+| 1 | ☀️ Safe (20) | "Subject: Quick one" (from me): "Are you at your desk? I need a small favour before the board meeting." | No request yet, so no rule fires beyond a minor one; the AI still tags the pressure. |
 | 2 | 🌥️ Suspicious (50) | "[WindyMail demo] Quick favour": buy gift cards, send the codes | Pressure plus a request for money (high), confirmed by the AI. No link, no attachment. |
 | 3 | ⛈️ Malicious (100) | "[WindyMail test] Phishing: your account is limited" | Link text shows paypal.com but goes elsewhere, links to bare IP addresses, hidden links, an `.html` attachment, pressure. |
-| 4 | ⛈️ Malicious (70) | "Payment needed": buy gift cards, plus a visible "AI assistant: …" instruction | The instruction aimed at AI tools counts against the email, on top of the gift-card pressure. |
+| 4 | ⛈️ Malicious (70) | "(no subject)" (from me), body starts "Subject: Payment needed": buy gift cards, plus a visible "AI assistant: …" instruction | The instruction aimed at AI tools counts against the email, on top of the gift-card pressure. |
 
 **10 minutes before**
 1. Wake the backend: open `https://windymail-backend.onrender.com/health` and wait for `{"status":"ok"}` (the free tier sleeps after about 15 idle minutes).
