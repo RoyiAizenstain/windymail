@@ -32,6 +32,9 @@ var VERDICT_UI = {
 /** Severity in words and a shape, so it never relies on color (ADR-015). */
 var SEVERITY_WORDS = { high: 'High risk', medium: 'Worth checking', low: 'Minor' };
 var SEVERITY_MARKS = { high: '▲', medium: '●', low: '○' };
+var SEVERITY_COLORS = { high: '#C5221F', medium: '#B06000', low: '#5F6368' };
+/** One color for everything the AI check found, so its findings read as a set. */
+var AI_COLOR = '#7627BB';
 
 /**
  * Fixed wording for each label the AI check returns (ADR-019). The model's own text
@@ -175,14 +178,21 @@ function repeat(text, count) {
 }
 
 /**
- * "▲ High risk", or "● Worth checking · AI check" for reasons only the AI check
- * found; empty without a known severity. Labels come from fixed maps, never the backend.
+ * "▲ High risk" in the severity's color, plus " · AI check" in the AI color for
+ * reasons only the AI check found; empty without a known severity. The shape and
+ * word carry the meaning, the color only adds to it. Labels come from fixed maps,
+ * never the backend.
  */
 function reasonLabel(reason) {
   var word = SEVERITY_WORDS[reason.severity];
   if (!word) return '';
-  var label = SEVERITY_MARKS[reason.severity] + ' ' + word;
-  return reason.fromAi ? label + ' · AI check' : label;
+  var label = colored(SEVERITY_MARKS[reason.severity] + ' ' + word, SEVERITY_COLORS[reason.severity]);
+  return reason.fromAi ? label + ' · ' + colored('AI check', AI_COLOR) : label;
+}
+
+/** Fixed text in a color; never used on untrusted text. */
+function colored(text, color) {
+  return '<font color="' + color + '">' + text + '</font>';
 }
 
 /** What the AI check found, in fixed wording; empty when it didn't run. */
@@ -196,8 +206,11 @@ function aiLines(ai) {
       return '• ' + AI_TACTIC_WORDS[tactic];
     });
   if (ai.injection) found.push('• ' + AI_INJECTION_WORDS);
-  if (found.length === 0) return ['The AI check read this email and found no pressure tactics.'];
-  return ['The AI check read this email and found:'].concat(found);
+  found = found.map(function (line) {
+    return colored('<b>' + toPlainText(line) + '</b>', AI_COLOR);
+  });
+  if (found.length === 0) return [toPlainText('The AI check read this email and found no pressure tactics.')];
+  return [toPlainText('The AI check read this email and found:')].concat(found);
 }
 
 /** "🤖 AI check" section, so the user sees the AI took part and what it found. */
@@ -205,8 +218,9 @@ function buildAiSection(ai) {
   var lines = aiLines(ai);
   if (lines.length === 0) return null;
   var section = CardService.newCardSection().setHeader('🤖 AI check');
+  // aiLines() escapes its fixed wording itself and adds the color markup.
   lines.forEach(function (line) {
-    section.addWidget(CardService.newTextParagraph().setText(toPlainText(line)));
+    section.addWidget(CardService.newTextParagraph().setText(line));
   });
   return section;
 }
