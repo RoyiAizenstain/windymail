@@ -452,7 +452,7 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 **Step 6: Images**
 - [x] Backend serves the card images from a fixed list (`GET /static/{name}`, anything else 404, no token: Gmail fetches them); `ASSET_VERSION` in the add-on refreshes Gmail's image cache. 9 new tests (497 total); add-on checks 52
 - [x] Round 2: banners narrowed from 600 to 520 px on the canvas (word and picture about 15% larger in Gmail), rendered at 2×; `ASSET_VERSION` 2
-- [x] Report button centered under the verdict block (organization mode), with the "never the email itself" line under it; no longer a fixed footer (Gmail right-aligns footer buttons). Columns for centering, plain button if a client lacks them
+- [x] Tried: Report button centered in the card body with Columns; Gmail's side panel draws no Columns (button and note vanished), and footer buttons can't be centered. Back to the fixed footer, button color set directly (the top bar is white)
 - [x] Header in the brand font (font option 1, Sora): the wordmark image replaces the text header on the result card; the verdict word is back in the score line as the text fallback. Top bar white (`primaryColor`), buttons blue (`secondaryColor`)
 - [x] Card matched to mockup panel A: header with logo, "WindyMail" and the verdict word (the text fallback if the banner doesn't load); score line without the word; organization mode: no report section, a one-line note above the footer button. Add-on checks 54
 

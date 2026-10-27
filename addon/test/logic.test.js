@@ -58,13 +58,11 @@ t('personal report guidance mentions Report phishing', () => assert.ok(ctx.PERSO
 t('images come from our backend only', () => { const urls = []; ctx.CardService = { newImage: () => { const img = { setImageUrl: (u) => { urls.push(u); return img; }, setAltText: () => img }; return img; } }; for (const v of ['wordmark','safe','suspicious','malicious']) ctx.cardImage(v, 'alt'); for (const u of urls) assert.ok(u.startsWith(ctx.BACKEND_BASE_URL + '/static/') && u.endsWith('.png?v=' + ctx.ASSET_VERSION), u); delete ctx.CardService; });
 t('report note says no email content is sent', () => assert.ok(/never the email itself/.test(ctx.REPORT_NOTE)));
 t('header logo matches the add-on logo', () => assert.ok(fs.readFileSync(path.join(dir,'appsscript.json'),'utf8').includes(ctx.LOGO_URL)));
-t('report button centered when columns exist, plain otherwise; note kept both ways', () => {
-  const mk = (log) => new Proxy(function () {}, { get: (_, k) => (k === 'TextButtonStyle' || k === 'HorizontalAlignment') ? { FILLED: 'F', CENTER: 'C' } : (...a) => { log.push(k); return mk(log); }, apply: () => mk(log) });
-  const added = []; const section = { addWidget: (w) => { added.push(w); return section; } };
-  const msg = { getId: () => 'm1' }; const res = { score: 90, reasons: [] };
-  const log1 = []; ctx.CardService = mk(log1); ctx.addReportButton(section, msg, res);
-  assert.ok(log1.includes('newColumns') && log1.includes('setBackgroundColor') && log1.includes('setText')); assert.equal(added.length, 1);
-  const log2 = []; const base = mk(log2); ctx.CardService = new Proxy({}, { get: (_, k) => k === 'newColumns' ? undefined : base[k] });
-  added.length = 0; ctx.addReportButton(section, msg, res); assert.equal(added.length, 2);
+t('report footer: blue button that calls onReport', () => {
+  const log = []; const mk = () => new Proxy(function () {}, { get: (_, k) => (...a) => { log.push([k, a[0]]); return mk(); }, apply: () => mk() });
+  ctx.CardService = mk(); ctx.buildReportFooter({ getId: () => 'm1' }, { score: 90, reasons: [] });
+  assert.ok(log.some(([k, a]) => k === 'setBackgroundColor' && a === ctx.REPORT_BUTTON_COLOR));
+  assert.ok(log.some(([k, a]) => k === 'setFunctionName' && a === 'onReport'));
+  assert.ok(!log.some(([k]) => k === 'newColumns'));
   delete ctx.CardService; });
 console.log('addon logic checks passed: ' + n);
