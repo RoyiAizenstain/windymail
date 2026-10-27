@@ -458,7 +458,8 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 
 **Step 7: Live check**
 - [x] Malicious, organization mode (27.10): banner, score line, reasons, footer button
-- [ ] **You:** Safe and Suspicious, personal mode, homepage
+- [x] Safe, organization mode (27.10): wordmark, banner, score line, one reason, AI check; white top bar readable
+- [ ] **You:** Suspicious, personal mode, homepage; Report footer after the Columns revert
 - [ ] **You:** README screenshots, once, after the final look
 
 **Done when:** all three verdicts and both modes look right in Gmail, tests pass, screenshots taken.
