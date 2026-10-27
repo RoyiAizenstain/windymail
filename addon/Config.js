@@ -4,6 +4,9 @@
  */
 var BACKEND_BASE_URL = 'https://windymail-backend.onrender.com';
 
+/** Bump when a card image in backend/static changes, so Gmail's image cache refreshes. */
+var ASSET_VERSION = '1';
+
 /** Upper bounds matching the backend request schema (backend/app/models.py). */
 var LIMITS = {
   from: 1000,

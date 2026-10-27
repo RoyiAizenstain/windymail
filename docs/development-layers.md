@@ -423,8 +423,9 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 ## Layer 7: Demo & Final README
 **Status:** In progress (27.10)
 
-- [ ] Card polish: report button in a fixed footer, verdict word in the header, score bar, one row per reason, homepage explains the three verdicts
-- [ ] Verdict banners from the Claude Design canvas (optional, if exported in time)
+- [x] Card polish: report button in a fixed footer, score bar with the verdict word in text, one row per reason (shape + severity word), Email section collapsed, homepage explains the three verdicts; confirmation in ADR-014 wording
+- [x] Wordmark and verdict banners (Sora) from the Claude Design canvas, served by the backend from a fixed list (`GET /static/{name}`, 9 new tests, 497 total; add-on checks 52)
+- [ ] **You:** `clasp push` after the backend is live, then check Safe, Suspicious and Malicious in both modes
 - [ ] Screenshots for README (after the card polish)
 - [ ] Demo email set prepared in the demo account
 - [ ] Demo script

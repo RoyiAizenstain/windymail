@@ -104,9 +104,10 @@ Related: [Development Layers](development-layers.md) · [User Stories](user-stor
 | Yellow (30-69) | 🌥️ Storm watch | "Some signs are suspicious. Don't click links or reply until you're sure." |
 | Red (70-100) | ⛈️ Storm warning | "This email is very likely malicious. Don't click, reply, or download." |
 | Partial analysis (ADR-005) | 🌫️ Limited visibility | "Some checks couldn't run. Verdict based on technical signals only." |
-| Report button | 🚩 Report this storm | Confirmation: "Thanks, the security team has been notified." |
+| Report button | Report to Security Team (plain: an action, not a headline) | Confirmation: "Thanks, the security team has been notified." |
 | Herd Immunity (stretch) | 🌪️ Storm front | "N people in your organization received a similar message in the last 15 minutes." |
 
+**Look (Layer 7, 27.10):** a WindyMail wordmark and one banner per verdict (weather picture, badge shape, verdict word), in Sora, served by the backend as fixed images; the rest of the card is Gmail's own font (CardService sets no fonts). The verdict word stays in text under the banner, so the card reads the same if an image doesn't load.
 **Rules:** weather words never replace the reasons list; no weather wording inside reasons or technical details; README and code use standard security terms.
 **Consequences:** A distinct, friendly product identity. Slight risk of reading as playful on a serious warning, mitigated by the plain-language line under every label.
 

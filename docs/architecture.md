@@ -122,6 +122,9 @@ Response: `{ "status": "received" }`
 * The backend posts to `SOC_WEBHOOK_URL` (https only, 5 s timeout, no redirects): `event`, `source`, `reported_at`, `reporter` (salted user hash), `message_id`, `score`, `verdict` (derived from the score by the backend), `reason_ids`. A webhook failure, timeout or non-2xx answer → 502, so the add-on never shows a false confirmation.
 * No email body, subject or sender is sent in reports (ADR-008). The score is the user's claim, copied from the `/analyze` result by the add-on.
 
+### `GET /static/{name}`
+Unauthenticated: the card's images (`wordmark.png`, `safe.png`, `suspicious.png`, `malicious.png`), fetched by Gmail. A fixed list: any other name is 404, so no request can read another file. Fixed files designed for the add-on, never content from an email.
+
 ### `GET /health`
 Unauthenticated keep-warm endpoint (ADR-012). Response: `{ "status": "ok" }`. Returns no version, config, or other data.
 

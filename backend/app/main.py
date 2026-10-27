@@ -6,10 +6,12 @@ are echoed (ADR-017).
 """
 
 import logging
+from pathlib import Path
 from typing import Annotated
 
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse
 
 from app.analysis import analyze as analyze_email
 from app.config import get_settings
@@ -29,6 +31,10 @@ from app.security import (
     rate_limited_user,
     validation_error_handler,
 )
+
+STATIC_DIR = Path(__file__).resolve().parent.parent / "static"
+# Wordmark and verdict banners shown in the card; Gmail fetches them without a token.
+STATIC_ASSETS = frozenset({"wordmark.png", "safe.png", "suspicious.png", "malicious.png"})
 
 
 def _configure_logging() -> None:
@@ -69,6 +75,17 @@ def create_app() -> FastAPI:
         # Keep-warm target (ADR-012): fixed response, no version or config.
         # HEAD too: uptime monitors (UptimeRobot) probe with HEAD by default.
         return HealthResponse(status="ok")
+
+    @app.get("/static/{name}")
+    def static_asset(name: str) -> FileResponse:
+        # The card's images. A fixed list, so no request can reach any other file.
+        if name not in STATIC_ASSETS:
+            raise HTTPException(status_code=404, detail="Not Found")
+        return FileResponse(
+            STATIC_DIR / name,
+            media_type="image/png",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
 
     @app.post("/api/v1/analyze")
     def analyze(

@@ -4,28 +4,34 @@
  *
  * Verdict wording per ADR-014: weather label, plain-language verdict word, and an
  * action line, so the verdict never relies on color or metaphor alone (ADR-015).
+ * The banner image repeats the verdict; the text below it still carries it, so the
+ * card reads the same if an image fails to load.
  */
 
 var VERDICT_UI = {
   safe: {
     label: '☀️ Clear skies',
     word: 'Safe',
+    color: '#137333',
     action: 'This email looks safe.',
   },
   suspicious: {
     label: '🌥️ Storm watch',
     word: 'Suspicious',
+    color: '#B06000',
     action: "Some signs are suspicious. Don't click links or reply until you're sure.",
   },
   malicious: {
     label: '⛈️ Storm warning',
     word: 'Malicious',
+    color: '#C5221F',
     action: "This email is very likely malicious. Don't click, reply, or download.",
   },
 };
 
-/** Severity in words, so it never relies on color (ADR-015). */
+/** Severity in words and a shape, so it never relies on color (ADR-015). */
 var SEVERITY_WORDS = { high: 'High risk', medium: 'Worth checking', low: 'Minor' };
+var SEVERITY_MARKS = { high: '▲', medium: '●', low: '○' };
 
 /**
  * Fixed wording for each label the AI check returns (ADR-019). The model's own text
@@ -49,21 +55,39 @@ var PERSONAL_REPORT_LINES = [
     '<b>Report phishing</b>. This helps Gmail protect you and others.',
 ];
 
+/** Shown with no email open: what WindyMail does and how to read a result. */
 function buildHomepageCard() {
-  var section = CardService.newCardSection().addWidget(
-    CardService.newTextParagraph().setText('Open an email to check whether it is safe.')
-  );
-  return newCard('Email check').addSection(section).build();
+  var intro = CardService.newCardSection()
+    .addWidget(cardImage('wordmark', 'WindyMail'))
+    .addWidget(
+      CardService.newTextParagraph().setText(
+        'Open an email and WindyMail checks it for signs of phishing and scams, then tells you why.'
+      )
+    );
+  var legend = CardService.newCardSection().setHeader('How to read the result');
+  ['safe', 'suspicious', 'malicious'].forEach(function (verdict) {
+    var ui = VERDICT_UI[verdict];
+    legend.addWidget(
+      CardService.newDecoratedText()
+        .setTopLabel(ui.label)
+        .setText(verdictWord(ui))
+        .setBottomLabel(ui.action)
+        .setWrapText(true)
+    );
+  });
+  return CardService.newCardBuilder().addSection(intro).addSection(legend).build();
 }
 
 function buildResultCard(message, result) {
   var ui = VERDICT_UI[result.verdict];
 
   var verdict = CardService.newCardSection()
+    .addWidget(cardImage('wordmark', 'WindyMail'))
+    .addWidget(cardImage(result.verdict, ui.word + ' (' + ui.label + ')'))
     .addWidget(
       CardService.newDecoratedText()
-        .setTopLabel(ui.label)
-        .setText('<b>' + ui.word + '</b> · risk score ' + result.score + '/100')
+        .setTopLabel('Risk score')
+        .setText(scoreLine(result.score, ui))
         .setWrapText(true)
     )
     .addWidget(CardService.newTextParagraph().setText(toPlainText(ui.action)));
@@ -79,32 +103,66 @@ function buildResultCard(message, result) {
     reasons.addWidget(CardService.newTextParagraph().setText('No warning signs found.'));
   }
   result.reasons.forEach(function (reason) {
-    reasons.addWidget(CardService.newTextParagraph().setText(reasonLine(reason)));
+    var row = CardService.newDecoratedText().setText(toPlainText(reason.text)).setWrapText(true);
+    var label = reasonLabel(reason);
+    if (label) row.setTopLabel(label);
+    reasons.addWidget(row);
   });
 
   var aiSection = buildAiSection(result.ai);
 
   var email = CardService.newCardSection()
     .setHeader('Email')
+    .setCollapsible(true)
     .addWidget(decorated('From', message.getFrom()))
     .addWidget(decorated('Subject', message.getSubject() || '(no subject)'));
 
-  var card = newCard('Email check').addSection(verdict).addSection(reasons);
+  var card = CardService.newCardBuilder().addSection(verdict).addSection(reasons);
   if (aiSection) card.addSection(aiSection);
-  card.addSection(buildReportSection(message, result));
+  card.addSection(buildReportSection(result));
   card.addSection(email);
   if (result.reasons.length > 0) card.addSection(buildDetailsSection(result.reasons));
+  if (result.mode === 'organization') card.setFixedFooter(buildReportFooter(message, result));
   return card.build();
 }
 
+/** A card image served by our backend (fixed files, never from an email). */
+function cardImage(name, altText) {
+  return CardService.newImage()
+    .setImageUrl(BACKEND_BASE_URL + '/static/' + name + '.png?v=' + ASSET_VERSION)
+    .setAltText(altText);
+}
+
+/** "SUSPICIOUS" in its color: the word carries the verdict, the color only adds to it. */
+function verdictWord(ui) {
+  return '<font color="' + ui.color + '"><b>' + ui.word.toUpperCase() + '</b></font>';
+}
+
 /**
- * "<b>High risk:</b> text", or "<b>Worth checking · AI check:</b> text" for reasons
- * only the AI check found. Labels come from fixed maps, never the backend.
+ * "■■■■■□□□□□  52/100 · Suspicious": filled squares read without color, the number
+ * is exact, and the verdict word stays in text in case the banner doesn't load.
  */
-function reasonLine(reason) {
+function scoreLine(score, ui) {
+  var filled = Math.round(score / 10);
+  return (
+    '<font color="' + ui.color + '">' + repeat('■', filled) + '</font>' +
+    repeat('□', 10 - filled) + '  <b>' + score + '</b>/100 · ' + ui.word
+  );
+}
+
+function repeat(text, count) {
+  return new Array(count + 1).join(text);
+}
+
+/**
+ * "▲ High risk", or "● Worth checking · AI check" for reasons only the AI check
+ * found; empty without a known severity. Labels come from fixed maps, never the backend.
+ */
+function reasonLabel(reason) {
   var word = SEVERITY_WORDS[reason.severity];
-  var label = word && reason.fromAi ? word + ' · AI check' : word;
-  return (label ? '<b>' + label + ':</b> ' : '• ') + toPlainText(reason.text);
+  if (!word) return '';
+  var label = SEVERITY_MARKS[reason.severity] + ' ' + word;
+  return reason.fromAi ? label + ' · AI check' : label;
 }
 
 /** What the AI check found, in fixed wording; empty when it didn't run. */
@@ -134,12 +192,12 @@ function buildAiSection(ai) {
 }
 
 /**
- * Organization mode: one-click report to the security team (US-06, ADR-008).
- * Personal mode: there is no security team, so point to Gmail's own "Report
- * phishing" instead (US-13, ADR-015). Shown for every verdict: the user may
- * spot something the checks missed.
+ * Organization mode: what a report sends; the button itself sits in the fixed
+ * footer, always in view (US-06, ADR-008). Personal mode: there is no security
+ * team, so point to Gmail's own "Report phishing" (US-13, ADR-015). Shown for
+ * every verdict: the user may spot something the checks missed.
  */
-function buildReportSection(message, result) {
+function buildReportSection(result) {
   var section = CardService.newCardSection().setHeader('Think this email is a scam?');
   if (result.mode !== 'organization') {
     PERSONAL_REPORT_LINES.forEach(function (line) {
@@ -147,23 +205,24 @@ function buildReportSection(message, result) {
     });
     return section;
   }
-
-  var report = CardService.newTextButton()
-    .setText('Report to Security Team')
-    .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
-    .setOnClickAction(
-      CardService.newAction()
-        .setFunctionName('onReport')
-        .setParameters(reportParameters(message.getId(), result))
-    );
-  return section
-    .addWidget(
-      CardService.newTextParagraph().setText(
-        'Let your security team know. They get the risk score and what WindyMail found, ' +
-          'not the content of the email.'
-      )
+  return section.addWidget(
+    CardService.newTextParagraph().setText(
+      'Report it to your security team with the button below. They get the risk score ' +
+        'and what WindyMail found, not the content of the email.'
     )
-    .addWidget(CardService.newButtonSet().addButton(report));
+  );
+}
+
+function buildReportFooter(message, result) {
+  return CardService.newFixedFooter().setPrimaryButton(
+    CardService.newTextButton()
+      .setText('Report to Security Team')
+      .setOnClickAction(
+        CardService.newAction()
+          .setFunctionName('onReport')
+          .setParameters(reportParameters(message.getId(), result))
+      )
+  );
 }
 
 /** Action parameters must be strings; the reason IDs travel as one comma-joined value. */
@@ -180,13 +239,13 @@ function reportParameters(messageId, result) {
   };
 }
 
-/** Shown after a report is delivered (US-06: confirmation after reporting). */
+/** Shown after a report is delivered (US-06: confirmation after reporting; ADR-014 wording). */
 function buildReportedCard() {
   var section = CardService.newCardSection()
     .addWidget(
       CardService.newDecoratedText()
         .setTopLabel('✅ Report sent')
-        .setText('<b>Thanks. Your security team has been told.</b>')
+        .setText('<b>Thanks, the security team has been notified.</b>')
         .setWrapText(true)
     )
     .addWidget(

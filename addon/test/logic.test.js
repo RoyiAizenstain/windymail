@@ -29,9 +29,12 @@ t('budget counts multibyte and escaped characters', () => { for (const ch of ['�
 t('never splits a surrogate pair', () => { const q = ctx.buildAnalyzeRequest(mkMsg({text:'😀'.repeat(50000), html:'😀'.repeat(50000)})); for (const f of ['body_text','body_html']) if (q[f]) assert.ok(!/[\ud800-\udbff]$/.test(q[f])); assert.ok(bytes(q) <= 190000); });
 t('utf8Length matches Buffer', () => { for (const s of ['abc','ש','😀x','é€']) assert.equal(ctx.utf8Length(s), Buffer.byteLength(s,'utf8')); });
 t('known severity kept, unknown dropped to null', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a',severity:'high'},{text:'b',severity:'<b>evil</b>'}]}); assert.equal(r.reasons[0].severity,'high'); assert.equal(r.reasons[1].severity,null); });
-t('reason line has severity word', () => assert.equal(ctx.reasonLine({text:'Bad link', severity:'high'}), '<b>High risk:</b> Bad link'));
-t('reason line escapes text', () => assert.equal(ctx.reasonLine({text:'<a href=x>', severity:'low'}), '<b>Minor:</b> &lt;a href=x&gt;'));
-t('reason line without severity', () => assert.equal(ctx.reasonLine({text:'x', severity:null}), '• x'));
+t('reason label has shape and severity word', () => { assert.equal(ctx.reasonLabel({severity:'high'}), '▲ High risk'); assert.equal(ctx.reasonLabel({severity:'medium'}), '● Worth checking'); assert.equal(ctx.reasonLabel({severity:'low'}), '○ Minor'); });
+t('reason label without severity is empty', () => assert.equal(ctx.reasonLabel({severity:null}), ''));
+t('score line: bar, exact score and verdict word', () => { const ui = ctx.VERDICT_UI.suspicious; assert.equal(ctx.scoreLine(52, ui), '<font color="#B06000">■■■■■</font>□□□□□  <b>52</b>/100 · Suspicious'); });
+t('score line at the edges', () => { assert.ok(ctx.scoreLine(0, ctx.VERDICT_UI.safe).includes('></font>□□□□□□□□□□  <b>0</b>')); assert.ok(ctx.scoreLine(100, ctx.VERDICT_UI.malicious).includes('■■■■■■■■■■</font>  <b>100</b>')); });
+t('every verdict has a word, label, color and action', () => { for (const v of ['safe','suspicious','malicious']) { const ui = ctx.VERDICT_UI[v]; assert.ok(ui.word && ui.label && /^#[0-9A-F]{6}$/.test(ui.color) && ui.action, v); } });
+t('verdict word is upper case in its color', () => assert.equal(ctx.verdictWord(ctx.VERDICT_UI.malicious), '<font color="#C5221F"><b>MALICIOUS</b></font>'));
 t('escapes html', () => assert.equal(ctx.toPlainText('<a href="x">pay</a> & co'), '&lt;a href=&quot;x&quot;&gt;pay&lt;/a&gt; &amp; co'));
 t('truncates display', () => assert.equal(ctx.toPlainText('x'.repeat(500)).length, 201));
 t('null safe', () => assert.equal(ctx.toPlainText(null), ''));
@@ -41,7 +44,7 @@ t('ai malformed is ignored, not fatal', () => { for (const ai of [null,'x',5,{ra
 t('ai lines use fixed wording', () => assert.deepEqual(Array.from(ctx.aiLines({ran:true, tactics:['authority','financial'], injection:true})), ['The AI check read this email and found:','• Claims to come from someone in charge','• Asks for money or payment details','• Tries to give instructions to automated checks']));
 t('ai found nothing', () => assert.deepEqual(Array.from(ctx.aiLines({ran:true, tactics:[], injection:false})), ['The AI check read this email and found no pressure tactics.']));
 t('ai did not run', () => assert.deepEqual(Array.from(ctx.aiLines({ran:false, tactics:['urgency'], injection:true})), []));
-t('ai reason labelled', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'Pressure', severity:'medium', source:'ai'},{text:'Link', severity:'high', source:'evil'}]}); assert.equal(ctx.reasonLine(r.reasons[0]), '<b>Worth checking · AI check:</b> Pressure'); assert.equal(ctx.reasonLine(r.reasons[1]), '<b>High risk:</b> Link'); });
+t('ai reason labelled', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'Pressure', severity:'medium', source:'ai'},{text:'Link', severity:'high', source:'evil'}]}); assert.equal(ctx.reasonLabel(r.reasons[0]), '● Worth checking · AI check'); assert.equal(ctx.reasonLabel(r.reasons[1]), '▲ High risk'); });
 t('ai impersonation wording', () => assert.deepEqual(Array.from(ctx.aiLines({ran:true, tactics:['impersonation'], injection:false})), ['The AI check read this email and found:', "• Pretends to come from a company, bank or person it isn't"]));
 t('impersonation passes validation', () => assert.deepEqual(Array.from(ctx.parseAnalyzeResponse({...good, ai:{ran:true, tactics:['impersonation']}}).ai.tactics), ['impersonation']));
 t('points shown in details', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', severity:'high', details:'Extension: .exe', points:35}]}); assert.equal(ctx.detailsLine(r.reasons[0]), '• (+35) Extension: .exe'); });
@@ -52,4 +55,5 @@ t('report request has exactly schema fields', () => assert.deepEqual(Object.keys
 t('report request filters and dedupes ids', () => assert.deepEqual(Array.from(ctx.buildReportRequest('m1', 80, ['dmarc_fail','','a,b','dmarc_fail','x'.repeat(65),'link_ip']).reason_ids), ['dmarc_fail','link_ip']));
 t('report parameters are strings', () => { const p = ctx.reportParameters(123, {score:82, reasons:[{id:'dmarc_fail'},{id:null},{id:'link_ip'}]}); assert.deepEqual({...p}, {messageId:'123', score:'82', reasonIds:'dmarc_fail,link_ip'}); });
 t('personal report guidance mentions Report phishing', () => assert.ok(ctx.PERSONAL_REPORT_LINES.some(l => l.includes('Report phishing'))));
+t('images come from our backend only', () => { const urls = []; ctx.CardService = { newImage: () => { const img = { setImageUrl: (u) => { urls.push(u); return img; }, setAltText: () => img }; return img; } }; for (const v of ['wordmark','safe','suspicious','malicious']) ctx.cardImage(v, 'alt'); for (const u of urls) assert.ok(u.startsWith(ctx.BACKEND_BASE_URL + '/static/') && u.endsWith('.png?v=' + ctx.ASSET_VERSION), u); delete ctx.CardService; });
 console.log('addon logic checks passed: ' + n);

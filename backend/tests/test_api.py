@@ -20,6 +20,30 @@ def test_health_accepts_head(anon_client: TestClient) -> None:
     assert response.content == b""
 
 
+@pytest.mark.parametrize("name", ["wordmark.png", "safe.png", "suspicious.png", "malicious.png"])
+def test_card_images_served_without_token(anon_client: TestClient, name: str) -> None:
+    response = anon_client.get(f"/static/{name}")
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "image/png"
+    assert response.content.startswith(b"\x89PNG")
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "/static/other.png",
+        "/static/..%2Fapp%2Fmain.py",
+        "/static/%2E%2E%2Frequirements.txt",
+        "/static/../requirements.txt",
+        "/static/",
+    ],
+)
+def test_only_listed_images_are_served(anon_client: TestClient, path: str) -> None:
+    response = anon_client.get(path)
+    assert response.status_code == 404
+    assert b"fastapi" not in response.content
+
+
 def test_analyze_returns_valid_response(client: TestClient, valid_request: dict) -> None:
     response = client.post(ANALYZE, json=valid_request)
     assert response.status_code == 200
