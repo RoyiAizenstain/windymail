@@ -1,0 +1,17 @@
+{
+  "about": "Marketing newsletter: click-tracking links, short hidden preheader.",
+  "request": {
+    "message_id": "legit_newsletter",
+    "from": "Morning Brew <crew@morningbrew.com>",
+    "reply_to": null,
+    "subject": "Markets rally on rate cut hopes",
+    "auth_results": "mx.google.com; dkim=pass header.i=@morningbrew.com; spf=pass smtp.mailfrom=bounce@morningbrew.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=morningbrew.com",
+    "body_text": "Good morning. Markets rallied yesterday. Read the full story on our site.",
+    "body_html": "<div style=\"display:none\">Markets rally, plus the week ahead</div><p>Good morning. Markets rallied yesterday.</p><p><a href=\"https://click.morningbrew.list-manage.com/track/click?u=1&id=2\">Read the full story</a></p><p><a href=\"https://click.morningbrew.list-manage.com/track/click?u=1&id=3\">Unsubscribe</a></p>",
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

@@ -220,7 +220,7 @@ CATALOG: dict[str, Message] = {
     ),
     "manipulation_strong": Message(
         category="manipulation",
-        severity="medium",
+        severity="high",
         text="This email pressures you and asks for a password, code or money. "
         "That combination is typical of scams.",
         details="Pressure tactics found by phrase",

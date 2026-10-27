@@ -1,0 +1,17 @@
+{
+  "about": "One-time code from a bank: mentions a code, no pressure.",
+  "request": {
+    "message_id": "legit_bank_code",
+    "from": "Bank Hapoalim <noreply@bankhapoalim.co.il>",
+    "reply_to": null,
+    "subject": "Your verification code",
+    "auth_results": "mx.google.com; dkim=pass header.i=@bankhapoalim.co.il; spf=pass smtp.mailfrom=bounce@bankhapoalim.co.il; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=bankhapoalim.co.il",
+    "body_text": "Your verification code is 482913. It is valid for 10 minutes. Bank Hapoalim will never ask you for this code by phone.",
+    "body_html": null,
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

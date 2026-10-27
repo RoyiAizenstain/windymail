@@ -358,11 +358,51 @@ Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Goo
 ---
 
 ## Layer 5: Scoring Model (simple)
-**Status:** In progress. Provisional model live: rules by severity (high 35, medium 15, low 5, per reason) plus LLM capped at +20, never subtracting (ADR-010, `app/scoring.py`). Remaining: review weights against the demo emails, close ADR-010, README scoring section
+**Status:** In progress (27.10). Steps 1-2 done; Step 3 applied (ADR-010 accepted): 13 of 16 corpus emails right, 3 malicious ones still too mild, decision pending.
 **Stories:** US-02 · **ADRs:** 003, 010
 
 - [x] Weighted sum of signals, capped LLM contribution, clamp to 0-100 (provisional, Layers 2-3)
 - [ ] README: scoring section
+
+**Done when:** every email in a realistic test set gets the expected verdict, and each score can be explained from its reasons alone.
+
+### Layer 5 step-by-step plan
+Same rules as before: one step at a time, each ends with its own check. **Decision** marks a choice to confirm before the step starts.
+
+A first check of today's provisional model (27.10) found three problems: a CEO gift-card scam scores 15 (Safe), even with the AI; a lookalike sender asking to verify an account scores 50 (Suspicious, not Malicious); and deceptions no legitimate email uses (`invoice.pdf.exe`, a file name reversed with the right-to-left character, hidden instructions to an AI) score 35 (Suspicious) alone.
+
+**Step 1: Decisions before code**
+- [x] **Decision:** keep the transparent model: points per reason by severity (high 35, medium 15, low 5), counted once per reason, LLM capped at +20 and never subtracting. Anyone can add up the reasons on the card and get the score
+- [x] **Decision:** "decisive" findings set a minimum score of 70 (Malicious) on their own, because no legitimate email does them: double extension (`invoice.pdf.exe`), right-to-left trick in a file name, instructions to an AI hidden from the reader. A short, fixed list in `scoring.py`, each with its reason
+- [x] **Decision:** pressure together with a request for credentials or money (`manipulation_strong`) becomes high: a text-only scam then reaches Suspicious on its own, and Malicious with any other strong sign (a lookalike sender, a mismatched link)
+- [x] **Decision:** each reason carries its points (`reasons[].points`), shown in "Technical details" as "+35", so the score is explainable on the card; the add-on never computes points itself
+- Check: ADR-010 moves from Open to Accepted with these rules and their reasons.
+
+**Step 2: Realistic test set**
+- [x] 16 emails as JSON fixtures (`tests/fixtures/corpus/`) with expected verdicts, English and Hebrew. Legitimate: newsletter, bank one-time code, Google security alert, vendor invoice, calendar invite, colleague sending a zip, shipping notice with a tracking link. Malicious: CEO gift-card scam, credential phishing from a lookalike domain, `invoice.pdf.exe`, HTML-smuggling attachment, link text vs destination mismatch, hidden AI instructions, Hebrew bank scam
+- [x] `tests/test_corpus.py`: each fixture's verdict, plus a printed score table (`pytest tests/test_corpus.py -s`)
+- Baseline (provisional model): all 9 legitimate emails Safe; 6 of 7 malicious too mild (CEO scam 15 Safe, HTML smuggling 20 Safe, `.pdf.exe` 35, hidden AI instructions 40, Hebrew bank scam 45, link mismatch 55); only lookalike phishing Malicious
+- Check: the table shows today's failures before any weight changes (the baseline).
+
+**Step 3: Apply the scoring rules**
+- [x] `manipulation_strong` high; decisive floor at 70 in `scoring.py` (`score()` returns score, reasons with points, and whether the floor applied); `points` on each reason, the AI's split within its +20 cap; fixed summary sentence when the floor applied
+- After the approved rules: CEO scam Suspicious, `.pdf.exe` and hidden AI instructions Malicious; all legitimate emails still Safe. Still too mild: Hebrew bank scam 65 (the display-name brand check reads Latin letters only, so "בנק לאומי" is invisible to it), HTML smuggling 20, Microsoft link mismatch 55; waiting on a decision
+- [ ] Tests: floor applies alone and never lowers a higher score; the LLM cap still holds; points on reasons add up to the score (except when the floor lifts it, which is stated); every corpus fixture gets its expected verdict
+- Check: tests pass; the corpus table matches expectations.
+
+**Step 4: Card**
+- [ ] Add-on: "Technical details" lines show "+35" per reason; validated as a whole number 0-100, otherwise left out (T8)
+- [ ] `logic.test.js` cases
+- Check: add-on checks pass.
+
+**Step 5: Deploy and live check**
+- [ ] Backend first, then `clasp push`
+- [ ] Live: a CEO gift-card email is at least Suspicious; the phishing test email Malicious; the shotim newsletter and a normal email Safe; Technical details show points
+- Check: verdicts as expected in Gmail.
+
+**Step 6: Close the layer**
+- [ ] README: Scoring section (the table of points, the decisive findings, the LLM cap, why it is additive and explainable, a worked example)
+- [ ] ADR-010 Accepted; architecture.md (`points` in the contract); tracker; CLAUDE.md
 
 ---
 

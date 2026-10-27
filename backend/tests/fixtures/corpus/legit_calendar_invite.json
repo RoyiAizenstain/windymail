@@ -1,0 +1,23 @@
+{
+  "about": "Calendar invite from a colleague.",
+  "request": {
+    "message_id": "legit_calendar_invite",
+    "from": "Dana Levi <dana.levi@northwind.io>",
+    "reply_to": null,
+    "subject": "Invitation: Q4 planning, Wed 28 Oct 10:00",
+    "auth_results": "mx.google.com; dkim=pass header.i=@northwind.io; spf=pass smtp.mailfrom=bounce@northwind.io; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=northwind.io",
+    "body_text": "You have been invited to Q4 planning on Wednesday 28.10.2026 at 10:00.",
+    "body_html": null,
+    "attachments": [
+      {
+        "filename": "invite.ics",
+        "mime_type": "text/calendar",
+        "size_bytes": 1820
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

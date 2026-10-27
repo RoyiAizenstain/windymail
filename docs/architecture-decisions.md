@@ -177,8 +177,16 @@ README.md
 
 ## Open Decisions
 
+None at the moment. ADR-010 was the last one; it is kept here with its history.
+
 ## ADR-010: Scoring model
-**Status:** Open
+**Status:** Accepted (27.10, Layer 5)
 **Question:** How to combine deterministic signals and the capped LLM signal into one explainable 0-100 score. Constraint from ADR-003 applies.
-**Provisional (Layer 2, accepted 26.10):** points per deterministic finding by severity (high 35, medium 15, low 5), summed and clamped to 0-100, mapped through the verdict thresholds. Expected to become the deterministic half of the final model.
-**LLM half (Layer 3, accepted 27.10):** LLM findings only add points, capped at +20 in total, and never lower the score (ADR-019). Exact per-label weights to be tuned in Layer 5.
+**History:** Provisional in Layer 2 (26.10): points per deterministic finding by severity, summed and clamped. LLM half in Layer 3 (27.10): LLM findings only add points, capped at +20, never lower the score (ADR-019). A first check in Layer 5 found three weaknesses: a CEO gift-card scam scored 15 (Safe) even with the AI; a lookalike sender asking to verify an account scored 50 (Suspicious); deceptions no legitimate email uses scored 35 (Suspicious) alone.
+**Decision:**
+* **Points per reason by severity:** high 35, medium 15, low 5, counted once per reason (ten shortened links count once, so volume alone can't reach Malicious), summed and clamped to 0-100. Anyone can add up the reasons on the card and get the score.
+* **LLM:** its reasons add at most +20 in total and never subtract (ADR-003, ADR-019).
+* **Decisive findings set a minimum of 70 (Malicious):** a trusted extension in front of a program (`invoice.pdf.exe`), the right-to-left character trick in a file name, and instructions to an AI hidden from the reader. No legitimate email does these, so one alone is enough. The list is short, fixed in `scoring.py`, and every entry needs a reason.
+* **Pressure with a request** (`manipulation_strong`: urgency or authority together with a request for credentials or money) is high: a text-only scam reaches Suspicious on its own, and Malicious with any other strong sign.
+* **Explainable on the card:** each reason carries its points (`reasons[].points`), shown in Technical details; when the floor lifts the score, the summary says so. The add-on never computes points itself.
+**Consequences:** The score stays additive and explainable. Legitimate mail that combines pressure with a request (an "urgent, overdue invoice" from a real vendor) becomes Suspicious; the advice "check before you pay" fits that case. Weights are hand-set, not learned; they are checked against a fixed set of realistic emails with expected verdicts (`backend/tests/fixtures/corpus/`), which guards against regressions but is not a measured error rate.

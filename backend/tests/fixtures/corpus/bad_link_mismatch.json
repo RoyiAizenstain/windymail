@@ -1,0 +1,17 @@
+{
+  "about": "Fake Microsoft storage warning: link text says microsoft.com, goes elsewhere.",
+  "request": {
+    "message_id": "bad_link_mismatch",
+    "from": "Microsoft 365 <no-reply@m365-notify.com>",
+    "reply_to": null,
+    "subject": "Your mailbox is almost full",
+    "auth_results": "mx.google.com; dkim=pass header.i=@m365-notify.com; spf=pass smtp.mailfrom=bounce@m365-notify.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=m365-notify.com",
+    "body_text": "Your mailbox will be disabled. Upgrade your storage now.",
+    "body_html": "<p>Your mailbox will be disabled.</p><p>Upgrade at <a href=\"http://m365-storage-upgrade.xyz/upgrade\">https://www.microsoft.com/storage</a></p>",
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "malicious"
+  }
+}

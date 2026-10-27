@@ -1,0 +1,17 @@
+{
+  "about": "Credential phishing from a lookalike domain with a matching link.",
+  "request": {
+    "message_id": "bad_lookalike_phishing",
+    "from": "PayPal <service@paypa1-security.com>",
+    "reply_to": null,
+    "subject": "Your account has been limited",
+    "auth_results": "mx.google.com; dkim=pass header.i=@paypa1-security.com; spf=pass smtp.mailfrom=bounce@paypa1-security.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=paypa1-security.com",
+    "body_text": "We noticed unusual activity. Verify your account within 24 hours or it will be suspended.",
+    "body_html": "<p>We noticed unusual activity.</p><p><a href=\"https://paypa1-security.com/login\">Verify your account</a> within 24 hours or it will be suspended.</p>",
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "malicious"
+  }
+}

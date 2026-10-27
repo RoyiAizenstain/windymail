@@ -20,10 +20,10 @@
     "verdict": "malicious",
     "reasons": [
       "link_text_mismatch",
+      "manipulation_strong",
       "link_ip",
       "attachment_web_page",
-      "hidden_link",
-      "manipulation_strong"
+      "hidden_link"
     ]
   }
 }

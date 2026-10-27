@@ -1,0 +1,23 @@
+{
+  "about": "Ordinary vendor invoice with a PDF; payment terms in days.",
+  "request": {
+    "message_id": "legit_vendor_invoice",
+    "from": "Acme Supplies Billing <billing@acmesupplies.com>",
+    "reply_to": null,
+    "subject": "Invoice 4521 for October",
+    "auth_results": "mx.google.com; dkim=pass header.i=@acmesupplies.com; spf=pass smtp.mailfrom=bounce@acmesupplies.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=acmesupplies.com",
+    "body_text": "Hello, please find attached invoice 4521 for October. Payment is due within 30 days. Thank you for your business.",
+    "body_html": null,
+    "attachments": [
+      {
+        "filename": "Invoice-4521.pdf",
+        "mime_type": "application/pdf",
+        "size_bytes": 84213
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

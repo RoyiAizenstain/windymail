@@ -47,6 +47,8 @@ class Reason(StrictModel):
     details: str
     # Which check found it, so the card can say the AI check helped (ADR-019).
     source: Literal["rules", "ai"] = "rules"
+    # What this reason added to the score (ADR-010), shown in Technical details.
+    points: int = Field(default=0, ge=0, le=100)
 
 
 class AiCheck(StrictModel):

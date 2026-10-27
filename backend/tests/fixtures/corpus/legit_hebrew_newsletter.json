@@ -1,0 +1,17 @@
+{
+  "about": "Hebrew newsletter whose domain fails DMARC with policy none.",
+  "request": {
+    "message_id": "legit_hebrew_newsletter",
+    "from": "\"מגזין שותים\" <contact@shotim.co.il>",
+    "reply_to": null,
+    "subject": "שוק הקפה השחור רותח",
+    "auth_results": "mx.google.com; dkim=pass header.i=@esp-mailer.com; spf=pass smtp.mailfrom=bounce@esp-mailer.com; dmarc=fail (p=NONE sp=NONE dis=NONE) header.from=shotim.co.il",
+    "body_text": "שלום לכולם, הנה הסיפורים של השבוע. קריאה נעימה!",
+    "body_html": null,
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

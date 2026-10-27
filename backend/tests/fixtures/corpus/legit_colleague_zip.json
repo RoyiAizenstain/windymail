@@ -1,0 +1,23 @@
+{
+  "about": "Colleague sharing photos as a zip.",
+  "request": {
+    "message_id": "legit_colleague_zip",
+    "from": "Yossi Mizrahi <yossi@northwind.io>",
+    "reply_to": null,
+    "subject": "Photos from the offsite",
+    "auth_results": "mx.google.com; dkim=pass header.i=@northwind.io; spf=pass smtp.mailfrom=bounce@northwind.io; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=northwind.io",
+    "body_text": "Hi all, here are the photos from the offsite. Enjoy!",
+    "body_html": null,
+    "attachments": [
+      {
+        "filename": "offsite-photos.zip",
+        "mime_type": "application/zip",
+        "size_bytes": 4200000
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from app.models import AnalyzeRequest, Reason
-from app.scoring import provisional_score
+from app.scoring import score
 from app.signals.base import Finding
 from app.signals.engine import run_checks, summarize, to_reasons
 from app.signals.messages import CATALOG, Message
@@ -89,7 +89,7 @@ def test_reasons_sorted_most_severe_first(monkeypatch: pytest.MonkeyPatch) -> No
 
 
 @pytest.mark.parametrize(
-    ("severities", "score"),
+    ("severities", "expected"),
     [
         ([], 0),
         (["low"], 5),
@@ -100,8 +100,8 @@ def test_reasons_sorted_most_severe_first(monkeypatch: pytest.MonkeyPatch) -> No
         (["high"] * 4, 100),
     ],
 )
-def test_provisional_score(severities: list[str], score: int) -> None:
-    assert provisional_score([reason(s) for s in severities]) == score
+def test_points_add_up(severities: list[str], expected: int) -> None:
+    assert score([reason(s) for s in severities], []).score == expected
 
 
 def test_summary_wording() -> None:

@@ -1,0 +1,17 @@
+{
+  "about": "CEO fraud: text only, no links or attachments, from a free-mail address.",
+  "request": {
+    "message_id": "bad_ceo_giftcards",
+    "from": "David Cohen <david.cohen.office@gmail.com>",
+    "reply_to": null,
+    "subject": "Quick favour",
+    "auth_results": "mx.google.com; dkim=pass header.i=@gmail.com; spf=pass smtp.mailfrom=bounce@gmail.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=gmail.com",
+    "body_text": "Are you at your desk? I need you to buy 5 gift cards urgently for a client. Scratch them and send me the codes. I'm in a meeting, email only.",
+    "body_html": null,
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "suspicious"
+  }
+}

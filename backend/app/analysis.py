@@ -10,13 +10,18 @@ never subtract. Without an LLM answer the result is the rules' alone, marked par
 from app import llm
 from app.config import get_settings
 from app.models import AiCheck, AnalyzeRequest, AnalyzeResponse, Manipulation, Reason
-from app.scoring import combined_score
+from app.scoring import score
 from app.signals import language
 from app.signals.base import Finding
 from app.signals.engine import run_checks, sort_reasons, summarize, to_reasons
 from app.verdict import verdict_for
 
 RULE_INJECTION_IDS = {"ai_instructions", "ai_instructions_hidden"}
+
+# Fixed wording (ADR-017) when a decisive finding lifts the score (ADR-010).
+DECISIVE_NOTE = (
+    "One of them is a trick no legitimate email uses, so this email is treated as malicious."
+)
 
 
 def llm_findings(
@@ -53,12 +58,15 @@ def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
                 ran=True, tactics=verdict.manipulation, injection=verdict.injection_attempt
             )
 
-    reasons = sort_reasons(rule_reasons + llm_reasons)
-    score = combined_score(rule_reasons, llm_reasons)
+    scored = score(rule_reasons, llm_reasons)
+    reasons = sort_reasons(scored.reasons)
+    summary = summarize(reasons)
+    if scored.floored:
+        summary += " " + DECISIVE_NOTE
     return AnalyzeResponse(
-        score=score,
-        verdict=verdict_for(score),
-        summary=summarize(reasons),
+        score=scored.score,
+        verdict=verdict_for(scored.score),
+        summary=summary,
         reasons=reasons,
         manipulation=tactics,
         ai=ai,

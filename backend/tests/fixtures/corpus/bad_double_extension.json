@@ -1,0 +1,23 @@
+{
+  "about": "Malware disguised as a PDF.",
+  "request": {
+    "message_id": "bad_double_extension",
+    "from": "Payroll <payroll@northwind-hr.net>",
+    "reply_to": null,
+    "subject": "Salary review 2026",
+    "auth_results": "mx.google.com; dkim=pass header.i=@northwind-hr.net; spf=pass smtp.mailfrom=bounce@northwind-hr.net; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=northwind-hr.net",
+    "body_text": "Please review the attached salary update before Friday.",
+    "body_html": null,
+    "attachments": [
+      {
+        "filename": "Salary_Review_2026.pdf.exe",
+        "mime_type": "application/octet-stream",
+        "size_bytes": 412000
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "malicious"
+  }
+}

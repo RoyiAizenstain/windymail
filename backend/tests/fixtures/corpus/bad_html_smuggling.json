@@ -1,0 +1,23 @@
+{
+  "about": "HTML attachment asking to sign in with the email password.",
+  "request": {
+    "message_id": "bad_html_smuggling",
+    "from": "Accounts Payable <ap@remit-docs.net>",
+    "reply_to": null,
+    "subject": "Remittance advice",
+    "auth_results": "mx.google.com; dkim=pass header.i=@remit-docs.net; spf=pass smtp.mailfrom=bounce@remit-docs.net; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=remit-docs.net",
+    "body_text": "Your payment remittance is attached. Open the attachment and sign in with your email password to view it today.",
+    "body_html": null,
+    "attachments": [
+      {
+        "filename": "Remittance_Advice.html",
+        "mime_type": "text/html",
+        "size_bytes": 9200
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "suspicious"
+  }
+}

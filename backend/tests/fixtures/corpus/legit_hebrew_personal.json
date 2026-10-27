@@ -1,0 +1,17 @@
+{
+  "about": "Personal Hebrew message from family.",
+  "request": {
+    "message_id": "legit_hebrew_personal",
+    "from": "Ima <ima.levi@gmail.com>",
+    "reply_to": null,
+    "subject": "ארוחת שישי",
+    "auth_results": "mx.google.com; dkim=pass header.i=@gmail.com; spf=pass smtp.mailfrom=bounce@gmail.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=gmail.com",
+    "body_text": "היי, מגיעים לארוחה ביום שישי? תביאו את הילדים. אוהבת",
+    "body_html": null,
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

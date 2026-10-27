@@ -1,0 +1,17 @@
+{
+  "about": "Shipping notice with a tracking link on the sender's own domain.",
+  "request": {
+    "message_id": "legit_shipping",
+    "from": "UPS <mcinfo@ups.com>",
+    "reply_to": null,
+    "subject": "Your package is on the way",
+    "auth_results": "mx.google.com; dkim=pass header.i=@ups.com; spf=pass smtp.mailfrom=bounce@ups.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=ups.com",
+    "body_text": "Your package will arrive tomorrow between 9:00 and 13:00.",
+    "body_html": "<p>Your package will arrive tomorrow.</p><p><a href=\"https://www.ups.com/track?tracknum=1Z999\">Track your package</a></p>",
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "about": "Hebrew bank scam: Leumi lookalike, blocking threat, verify details.",
+  "request": {
+    "message_id": "bad_hebrew_bank",
+    "from": "\"בנק לאומי\" <security@leumi-secure.co>",
+    "reply_to": null,
+    "subject": "החשבון שלך ייחסם",
+    "auth_results": "mx.google.com; dkim=pass header.i=@leumi-secure.co; spf=pass smtp.mailfrom=bounce@leumi-secure.co; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=leumi-secure.co",
+    "body_text": "לקוח יקר, זוהתה פעילות חשודה. החשבון שלך ייחסם תוך 24 שעות. אמת את פרטי החשבון כאן.",
+    "body_html": "<p>לקוח יקר, זוהתה פעילות חשודה. החשבון שלך ייחסם תוך 24 שעות.</p><p><a href=\"https://leumi-secure.co/verify\">אמת את פרטי החשבון</a></p>",
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "malicious"
+  }
+}

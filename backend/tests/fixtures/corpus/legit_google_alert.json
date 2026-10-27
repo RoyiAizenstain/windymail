@@ -1,0 +1,17 @@
+{
+  "about": "Real Google sign-in alert, links to google.com.",
+  "request": {
+    "message_id": "legit_google_alert",
+    "from": "Google <no-reply@accounts.google.com>",
+    "reply_to": null,
+    "subject": "Security alert",
+    "auth_results": "mx.google.com; dkim=pass header.i=@accounts.google.com; spf=pass smtp.mailfrom=bounce@accounts.google.com; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=google.com",
+    "body_text": "A new sign-in to your Google Account was detected on a Windows device. If this was you, you don't need to do anything. If not, check your recent activity.",
+    "body_html": "<p>A new sign-in to your Google Account was detected on a Windows device.</p><p><a href=\"https://myaccount.google.com/notifications\">Check activity</a></p>",
+    "attachments": [],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}
