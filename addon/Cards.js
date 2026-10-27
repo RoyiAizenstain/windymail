@@ -284,7 +284,7 @@ function buildReportedCard() {
         "Until they get back to you, don't click links, open attachments, or reply to this email."
       )
     );
-  return newCard('Reported').addSection(section).build();
+  return CardService.newCardBuilder().addSection(wordmarkSection()).addSection(section).build();
 }
 
 /** Shown when the backend is unreachable, slow, or returns something invalid. */
@@ -310,6 +310,10 @@ function buildErrorCard() {
   return newCard('Check unavailable').addSection(section).build();
 }
 
+/**
+ * Text header for the error card: it shows when the backend is unreachable, and
+ * the wordmark image is served by the backend.
+ */
 function newCard(subtitle) {
   return CardService.newCardBuilder().setHeader(
     CardService.newCardHeader()
