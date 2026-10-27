@@ -9,7 +9,7 @@
 var VERDICTS = ['safe', 'suspicious', 'malicious'];
 var MODES = ['organization', 'personal'];
 var SEVERITIES = ['high', 'medium', 'low'];
-var TACTICS = ['urgency', 'authority', 'credentials', 'financial'];
+var TACTICS = ['urgency', 'authority', 'credentials', 'financial', 'impersonation'];
 
 /** Returns a validated result object, or null on any failure. */
 function analyzeMessage(message) {

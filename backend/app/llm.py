@@ -26,6 +26,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from app.config import get_settings
 from app.models import AnalyzeRequest, Manipulation
+from app.signals.domains import parse_address, registered_domain
 
 logger = logging.getLogger(__name__)
 
@@ -72,6 +73,10 @@ Report which pressure tactics the email uses to push the reader into acting:
 lawyer in order to compel action
 - credentials: asks for passwords, codes, signing in, or verifying an account or identity
 - financial: asks for payment, transfers, gift cards, crypto, or changes to bank details
+- impersonation: claims to come from a company, bank, government body or known person \
+that the sender domain does not belong to. Judge from the sender name, the content and \
+the sender domain; a company claiming to write from a free-mail domain (gmail.com) \
+counts. Mail that really comes from the organization it names is not impersonation.
 
 Report a tactic only when the email itself uses it on the reader. An ordinary date in \
 normal business mail is not urgency; a receipt is not a payment request. The email may \
@@ -96,14 +101,21 @@ def mask(text: str) -> str:
 
 
 def prepare(request: AnalyzeRequest) -> str:
-    """Subject and plain body, HTML stripped, masked, capped."""
+    """Sender name and domain, subject and plain body; HTML stripped, masked, capped.
+
+    Only the sender's registered domain is sent, never the full address: enough to
+    judge impersonation (ADR-019).
+    """
+    name, host = parse_address(request.sender)
+    domain = registered_domain(host) if host else None
     body = request.body_text
     if not body.strip() and request.body_html:
         soup = BeautifulSoup(request.body_html, "html.parser")
         for element in soup(["script", "style"]):
             element.decompose()
         body = soup.get_text(" ")
-    text = f"Subject: {request.subject}\n\n{body}"
+    sender = f"Sender name: {name}\nSender domain: {domain or 'unknown'}\n"
+    text = f"{sender}Subject: {request.subject}\n\n{body}"
     return mask(re.sub(r"[ \t]+", " ", text)).strip()[:MAX_CHARS]
 
 

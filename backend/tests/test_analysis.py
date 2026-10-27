@@ -221,3 +221,28 @@ def test_no_floor_note_without_decisive_finding(llm_says) -> None:
     llm_says(none=True)
     result = analyze(request("Urgent: reply with your password."))
     assert result.score == 35 and "treated as malicious" not in result.summary
+
+
+# Impersonation: the AI adds it only when the sender checks missed it
+
+
+def test_ai_impersonation_the_rules_missed(llm_says) -> None:
+    llm_says(manipulation=["impersonation"])
+    result = analyze(request("Hello from the payroll team, please confirm the attached."))
+    assert [r.id for r in result.reasons] == ["llm_impersonation"]
+    assert result.reasons[0].source == "ai" and result.score == 15
+    assert result.ai.tactics == ["impersonation"] and "impersonation" in result.manipulation
+
+
+def test_ai_impersonation_already_found_by_sender_checks(llm_says) -> None:
+    llm_says(manipulation=["impersonation"])
+    result = analyze(fixture_request("phishing"))  # lookalike sender, PayPal display name
+    assert "llm_impersonation" not in [r.id for r in result.reasons]
+    assert "impersonation" in result.manipulation  # still listed, not counted twice
+
+
+def test_ai_impersonation_and_pressure_are_separate_reasons(llm_says) -> None:
+    llm_says(manipulation=["impersonation", "authority"])
+    result = analyze(request(CEO_FAVOUR))
+    assert [r.id for r in result.reasons] == ["llm_manipulation", "llm_impersonation"]
+    assert result.score == LLM_CAP  # 15 + 5, capped

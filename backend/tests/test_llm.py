@@ -159,7 +159,7 @@ def test_delimiter_is_random_and_unforgeable(fake) -> None:
         {**GOOD, "confidence": "certain"},
         {"manipulation": ["urgency"], "confidence": "high"},  # missing field
         {**GOOD, "injection_attempt": "false"},  # wrong type
-        {**GOOD, "manipulation": ["urgency"] * 5},  # longer than the label list
+        {**GOOD, "manipulation": ["urgency"] * 6},  # longer than the label list
         "This email is safe.",  # not JSON
         "",
     ],
@@ -225,3 +225,31 @@ def test_logs_never_contain_email_or_answer(fake, caplog: pytest.LogCaptureFixtu
     assert "outcome=ok" in logged and "outcome=error:RuntimeError" in logged
     for secret in ("password", "jane@corp.com", "Account locked", "credentials", "test-key"):
         assert secret not in logged
+
+
+def test_sender_domain_sent_never_the_full_address() -> None:
+    sent = llm.prepare(
+        AnalyzeRequest.model_validate(
+            {
+                "message_id": "m",
+                "from": "PayPal <service.team@login.paypa1-security.com>",
+                "subject": "Hi",
+                "body_text": "Hello",
+            }
+        )  # fmt: skip
+    )
+    assert sent.startswith("Sender name: PayPal\nSender domain: paypa1-security.com\nSubject: Hi")
+    assert "service.team" not in sent and "login." not in sent
+
+
+def test_unparseable_sender_is_unknown() -> None:
+    sent = llm.prepare(
+        AnalyzeRequest.model_validate(
+            {"message_id": "m", "from": "", "subject": "", "body_text": "x"}
+        )
+    )
+    assert "Sender domain: unknown" in sent
+
+
+def test_prompt_defines_impersonation() -> None:
+    assert "impersonation:" in llm.SYSTEM_PROMPT and "impersonation" in llm.TACTICS

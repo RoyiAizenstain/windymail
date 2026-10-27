@@ -246,6 +246,12 @@ CATALOG: dict[str, Message] = {
         text="The way this email is written suggests it is trying to pressure you into acting.",
         details="Pressure tactics found by the AI check and not by phrase",
     ),
+    "llm_impersonation": Message(
+        category="sender",
+        severity="medium",
+        text="This email seems to pretend to come from someone it doesn't.",
+        details="Impersonation found by the AI check and not by the sender checks",
+    ),
     "llm_ai_instructions": Message(
         category="content",
         severity="medium",

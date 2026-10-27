@@ -391,6 +391,8 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 - [x] Tests: floor applies alone and never lowers a higher score; the LLM cap still holds and is split across AI reasons; points on reasons add up to the score (except when the floor lifts it, which the summary states); Hebrew brand names and common Hebrew words that must not match; all 16 corpus emails get their expected verdict (458 total)
 - Check: tests pass; the corpus table matches expectations.
 
+- [x] Added after review (27.10): AI label `impersonation` (claims to come from someone the sending domain doesn't belong to), so impersonation is caught in any language and for any brand, on top of the rule-based brand list (English and Hebrew names). The AI now also receives the sender's display name and registered domain, never the full address (ADR-019 updated). Counted only when the sender checks missed it (`llm_impersonation`, medium, within the +20 cap); add-on wording "Pretends to come from a company, bank or person it isn't". 464 backend tests, 40 add-on checks
+
 **Step 4: Card**
 - [ ] Add-on: "Technical details" lines show "+35" per reason; validated as a whole number 0-100, otherwise left out (T8)
 - [ ] `logic.test.js` cases

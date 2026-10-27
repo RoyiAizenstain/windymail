@@ -13,7 +13,7 @@ from app.config import Mode
 Verdict = Literal["safe", "suspicious", "malicious"]
 Category = Literal["sender", "link", "attachment", "content", "manipulation"]
 Severity = Literal["low", "medium", "high"]
-Manipulation = Literal["urgency", "authority", "credentials", "financial"]
+Manipulation = Literal["urgency", "authority", "credentials", "financial", "impersonation"]
 
 
 class StrictModel(BaseModel):

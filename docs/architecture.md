@@ -93,7 +93,7 @@ Response:
       "source": "rules | ai"
     }
   ],
-  "manipulation": ["urgency", "authority", "credentials", "financial"],
+  "manipulation": ["urgency", "authority", "credentials", "financial", "impersonation"],
   "ai": { "ran": true, "tactics": ["authority"], "injection": false },
   "herd": { "count": 0, "window_minutes": 15 },
   "partial": false,

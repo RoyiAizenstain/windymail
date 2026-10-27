@@ -17,6 +17,11 @@ from app.signals.engine import run_checks, sort_reasons, summarize, to_reasons
 from app.verdict import verdict_for
 
 RULE_INJECTION_IDS = {"ai_instructions", "ai_instructions_hidden"}
+# Rule findings that already mean "pretends to be someone else" (sender checks).
+RULE_IMPERSONATION_IDS = {
+    "display_name_brand", "display_name_mismatch", "sender_lookalike",
+    "sender_brand_in_domain", "sender_mixed_script",
+}  # fmt: skip
 
 # Fixed wording (ADR-017) when a decisive finding lifts the score (ADR-010).
 DECISIVE_NOTE = (
@@ -32,8 +37,11 @@ def llm_findings(
         return []
     findings = []
     missed = [tactic for tactic in verdict.manipulation if tactic not in rule_tactics]
-    if missed:
-        findings.append(Finding("llm_manipulation", tuple(missed)))
+    pressure = [tactic for tactic in missed if tactic != "impersonation"]
+    if pressure:
+        findings.append(Finding("llm_manipulation", tuple(pressure)))
+    if "impersonation" in missed:
+        findings.append(Finding("llm_impersonation"))
     if verdict.injection_attempt and not RULE_INJECTION_IDS & {r.id for r in rule_reasons}:
         findings.append(Finding("llm_ai_instructions"))
     return findings
@@ -42,6 +50,8 @@ def llm_findings(
 def analyze(request: AnalyzeRequest) -> AnalyzeResponse:
     rule_reasons = run_checks(request)
     rule_tactics = language.labels(request)
+    if RULE_IMPERSONATION_IDS & {r.id for r in rule_reasons}:
+        rule_tactics.append("impersonation")
     tactics = list(rule_tactics)
 
     verdict = llm.classify(request)

@@ -42,4 +42,6 @@ t('ai lines use fixed wording', () => assert.deepEqual(Array.from(ctx.aiLines({r
 t('ai found nothing', () => assert.deepEqual(Array.from(ctx.aiLines({ran:true, tactics:[], injection:false})), ['The AI check read this email and found no pressure tactics.']));
 t('ai did not run', () => assert.deepEqual(Array.from(ctx.aiLines({ran:false, tactics:['urgency'], injection:true})), []));
 t('ai reason labelled', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'Pressure', severity:'medium', source:'ai'},{text:'Link', severity:'high', source:'evil'}]}); assert.equal(ctx.reasonLine(r.reasons[0]), '<b>Worth checking · AI check:</b> Pressure'); assert.equal(ctx.reasonLine(r.reasons[1]), '<b>High risk:</b> Link'); });
+t('ai impersonation wording', () => assert.deepEqual(Array.from(ctx.aiLines({ran:true, tactics:['impersonation'], injection:false})), ['The AI check read this email and found:', "• Pretends to come from a company, bank or person it isn't"]));
+t('impersonation passes validation', () => assert.deepEqual(Array.from(ctx.parseAnalyzeResponse({...good, ai:{ran:true, tactics:['impersonation']}}).ai.tactics), ['impersonation']));
 console.log('addon logic checks passed: ' + n);

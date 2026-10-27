@@ -36,6 +36,7 @@ var AI_TACTIC_WORDS = {
   authority: 'Claims to come from someone in charge',
   credentials: 'Asks for a password, code or sign-in',
   financial: 'Asks for money or payment details',
+  impersonation: "Pretends to come from a company, bank or person it isn't",
 };
 var AI_INJECTION_WORDS = 'Tries to give instructions to automated checks';
 
