@@ -4,7 +4,7 @@ A Gmail Add-on that analyzes an opened email and shows a maliciousness score (0-
 
 Built as a home assignment for the Upwind Security Analyst role. The brief: build a Gmail Add-on, backed by a backend service, that analyzes an opened email and presents a maliciousness score with a verdict and the reasoning behind it, treating emails, attachments, and external responses as untrusted input. The scope and signals were left open. The design priority is security first, product second: a smaller feature set that is secure, explainable, and stable in a live demo.
 
-> **Status:** feature-complete and deployed. The add-on runs in Gmail against the live backend on Render: deterministic signals, a bounded AI check, a transparent score, backend hardening, one-click reporting to a (mock) security team, and the final card design. Remaining: demo material. Progress: [docs/development-layers.md](docs/development-layers.md).
+> **Status:** feature-complete and deployed. The add-on runs in Gmail against the live backend on Render: deterministic signals, a look inside attachments without sending them, a bounded AI check, a transparent score, backend hardening, one-click reporting to a (mock) security team, and the final card design. Remaining: demo material. Progress: [docs/development-layers.md](docs/development-layers.md).
 
 ---
 
@@ -28,7 +28,7 @@ Open an email in Gmail and the WindyMail panel shows, within a few seconds:
 
 1. **A verdict** in a banner, with a word and a shape, never color alone: ☀️ **Safe** (0-29), 🌥️ **Suspicious** (30-69) or ⛈️ **Malicious** (70-100), plus what to do ("Don't click, reply, or download").
 2. **A risk score** from 0 to 100, as a bar and a number.
-3. **Why:** each warning sign in plain language with its severity ("▲ High risk: A link shows one web address but really goes to a different one").
+3. **Why:** each warning sign in plain language with its severity ("▲ High risk: A link shows one web address but really goes to a different one"), including what's inside attachments: a program named as a PDF, a risky file in a zip, hidden macros. Files never leave Gmail; only a few facts about them do.
 4. **🤖 AI check:** which pressure tactics an AI model found, in WindyMail's own fixed wording, never the model's words.
 5. **Report to Security Team** (organization mode): one click sends the score and the reason IDs, never the email itself, to the security team's webhook. Without a security team (personal mode), the card explains how to use Gmail's own "Report phishing" instead.
 

@@ -490,7 +490,7 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 **Status:** Built (27.10): checks 1-5, kept simple. Backend 532 tests (corpus 18/18), add-on checks 65, inspector run on real files made by a zip tool. Live Gmail check pending.
 **Stories:** US-03 · **ADRs:** 021, 013, 017 · **Threats:** T13
 
-Today only an attachment's name, type and size are checked; its contents never leave Gmail (ADR-013). This layer adds structural facts about each file, read by the add-on, without sending the file.
+Before this layer, only an attachment's name, type and size were checked (ADR-013). This layer adds structural facts about each file, read by the add-on, without sending the file: the bytes still never leave Gmail.
 
 **Step 1: Decisions** (recommendation first)
 - [x] **Decision:** scope: all five checks, simplest form ("do all simple", 27.10)
@@ -543,7 +543,8 @@ Today only an attachment's name, type and size are checked; its contents never l
 * Sender and link enrichment called from our own code, never chosen by the AI (no agent: the email would steer the tools): domain age (RDAP; a domain registered days ago is a strong sign), Google Safe Browsing for links
 * More AI labels (secrecy, "change of bank details"); letting the AI name the brand it sees, validated strictly, for a generic impersonation check
 * Automatic SOC escalation (US-08)
-* Attachment checks beyond the filename, in two levels (27.10, deferred for the deadline):
-  * **Level 1, backend only, data already received:** more risky types now used in attacks (`.one`, `.xll`, `.chm`, `.url`, `.appx`, `.msix`, `.iqy`, `.slk`, `.library-ms`); declared MIME type contradicting the name (an `application/x-msdownload` file named `.pdf`) → high.
-  * **Level 2, add-on inspects inside Gmail, sends only facts:** real file type from the first bytes (`MZ` program named `.pdf`) → high; file types listed inside zip archives (`.exe` inside `invoice.zip`) → high; password-protected archive (scanners can't open it, the password sits in the body) → medium to high. Contents never leave Gmail; size-capped for Apps Script time and memory limits; needs a schema change, so backend deploys before `clasp push`.
-  * Level 3, file hash lookup (VirusTotal, hash only, never upload) belongs with Deep Scan.
+* Attachment checks beyond what Layer 8 built:
+  * More risky types now used in attacks (`.one`, `.xll`, `.chm`, `.url`, `.appx`, `.msix`, `.iqy`, `.slk`, `.library-ms`); declared MIME type contradicting the name.
+  * Old-style Office macros (`.doc` / `.xls` files, OLE format), archives other than zip, nested archives, PDF names written in escaped form (`/J#61vaScript`).
+  * File hash lookup (VirusTotal, hash only, never upload) belongs with Deep Scan: a lookup tells a third party which file the user received.
+  * ~~Real file type from the first bytes, names inside zips, password-protected archives~~: built in Layer 8 (ADR-021).

@@ -13,6 +13,8 @@ Home assignment for **Upwind Security** (Security Analyst role): a Gmail Add-on 
 * [docs/user-stories.md](docs/user-stories.md) — what each persona needs and acceptance criteria.
 * [docs/architecture-decisions.md](docs/architecture-decisions.md) — decisions taken (ADRs) and open decisions. **Single source of truth for rules and thresholds.**
 * [docs/threat-model.md](docs/threat-model.md) — assets, attackers, threats and mitigations, out-of-scope.
+* [docs/demo-script.md](docs/demo-script.md) — the live demo: warm-up, the four demo emails in the inbox, flow, failure handling, likely questions.
+* **Card images:** the "WindyMail Assets" Claude Design canvas (https://claude.ai/artifact/PZjXCz3BxP5QcmJyL2LLYB) holds the wordmark and the three verdict banners (Sora); exported as 2x PNGs into `backend/static/`.
 
 When starting a session, check the status lines in `development-layers.md` to see where work stopped. When finishing a task, tick its box and update the layer status.
 
@@ -33,6 +35,8 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 * UI only through CardService; every untrusted string escaped as plain text (ADR-002).
 * Reasons use fixed wording from `backend/app/signals/messages.py`; only normalized technical values (domains, IPs, extensions, auth results) are echoed (ADR-017).
 * Never fetch or resolve a URL from an email (SSRF); links are parsed only.
+* Attachment bytes never leave Gmail: the add-on sends only structural facts (real type, a zip's table of contents, PDF actions), never decompresses, and stays within fixed budgets; anything unread is "not inspected", never clean (ADR-021).
+* The card shows plain-language reasons and the total only, never parsed values or per-reason points: they would turn WindyMail into an attacker's test lab (threat T12, ADR-017).
 * Secrets only from environment variables; never log email bodies, prompts, LLM answers or tokens.
 * Each layer must end in a working demo before starting the next.
 
@@ -40,7 +44,8 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 * **Backend tests:** `cd backend && .venv/Scripts/python -m pytest -q && .venv/Scripts/ruff check . && .venv/Scripts/ruff format --check .` (Windows venv; the system Python has no pytest). Tests never call the real LLM: `conftest.py` clears the LLM settings.
 * **Add-on checks:** `node addon/test/logic.test.js` from the repo root.
 * **Deploy:** `git push` to `main` → Render redeploys the backend. `clasp push` from the repo root → updates the add-on. When both change: backend first, wait until Render shows it live, then `clasp push` (the backend rejects request fields it doesn't know). When a card image in `backend/static/` changes, bump `ASSET_VERSION` in `addon/Config.js`, and `clasp push` only after Render serves the new image: Gmail caches each image by its URL, so an early push caches the old one under the new version.
-* **Live check:** Render logs carry one line per request (`app.access: request id=… method=… path=… status=… latency_ms=… user=<hash>`) and one per LLM call (`llm: outcome=ok|skipped:no_key|timeout|status:… model=… latency_ms=…`).
+* **Kill switches on Render, no deploy:** `LLM_ENABLED=false` (rules only, `partial`), `ATTACHMENT_INSPECTION=false` (attachment facts ignored), unset `SOC_WEBHOOK_URL` (personal mode).
+* **Live check:** Render logs carry one line per request (`app.access: request id=… method=… path=… status=… latency_ms=… user=<hash>`) and one per LLM call (`llm: outcome=ok|skipped:no_key|timeout|status:… model=… latency_ms=…`), one per report (`report: outcome=ok|timeout|status:… user=<hash> latency_ms=…`).
 
 ## Verdict thresholds
 * 🟢 0-29 Safe (☀️ Clear skies) · 🟡 30-69 Suspicious (🌥️ Storm watch) · 🔴 70-100 Malicious (⛈️ Storm warning)
@@ -50,7 +55,12 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 **Wednesday 28.10.2026, 11:00.** Scope cut per ADR-013. Herd Immunity is the only stretch goal.
 
 ## Open items
-* **Status (27.10):** Layers 1-5 done (skeleton, rule engine, bounded LLM, backend security, scoring); Layer 6 done: Report button (`/api/v1/report`, mock SOC on webhook.site). Layer 6.5 (UI) done: wordmark and verdict banners (Sora) from the Claude Design canvas, no Technical details on the card (threat T12, ADR-020 future work). Layer 7 done: README with screenshots, demo script on the four emails already in the inbox ([docs/demo-script.md](docs/demo-script.md)), secrets check; no fallback recording (the screenshots are the fallback). Optional live checks: personal mode, the injection email without its injected line (Layer 3), a 429 from Gmail (Layer 4). Layer 8 (attachment inspection, ADR-021) built: the add-on reads facts from each file (real type, zip table of contents, PDF actions) and sends facts only; live Gmail check pending. Herd Immunity (stretch) not started.
-* **Layer 4 built** in `app/security.py`: 200 KB cap (413), per-user rate limit (429), 422 and 500 responses that never echo input, own access log without client IPs (`app.access`, `X-Request-ID`).
-* **Scoring (ADR-010, accepted):** high 35 / medium 15 / low 5 per reason, LLM +20 cap; decisive findings (`invoice.pdf.exe`, right-to-left file names, hidden AI instructions) set a minimum of 70. Any scoring change must keep `pytest tests/test_corpus.py` green (18 realistic emails with expected verdicts).
-* Hosting decided: Render free tier with keep-warm ping (ADR-012).
+* **Status (27.10):** Layers 1-8 done and live, except Layer 8's Gmail check.
+  * 1-5: skeleton, rule engine, bounded LLM, backend security (`app/security.py`), scoring.
+  * 6: Report button (`/api/v1/report`, mock SOC on webhook.site).
+  * 6.5 UI: wordmark and verdict banners, colored severity labels, AI findings as purple tags, Report in a fixed footer; no Technical details on the card (T12; analyst view designed as ADR-020).
+  * 7: README with six screenshots, demo script, secrets check; no fallback recording (the screenshots are the fallback).
+  * 8: attachment inspection (ADR-021).
+* **Open:** Layer 8 live check in Gmail (deploy order: backend live first, then `clasp push`). Optional: personal mode live, the injection email without its injected line (Layer 3), a 429 from Gmail (Layer 4). Herd Immunity (stretch) not started.
+* **Scoring (ADR-010, accepted):** high 35 / medium 15 / low 5 per reason, LLM +20 cap; decisive findings set a minimum of 70: `invoice.pdf.exe`, right-to-left file names, hidden AI instructions, a file whose real type contradicts its trusted name. Any scoring change must keep `pytest tests/test_corpus.py` green (18 realistic emails with expected verdicts).
+* **Hosting:** Render free tier with an UptimeRobot keep-warm ping (ADR-012).

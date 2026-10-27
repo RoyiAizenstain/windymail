@@ -51,8 +51,8 @@ function analyzeMessage(message) {
 }
 
 /**
- * Builds the request from the opened message. Attachments are sent as metadata
- * only; their contents never leave Gmail.
+ * Builds the request from the opened message. Attachments are sent as metadata plus
+ * a few structural facts (ADR-021); their bytes never leave Gmail.
  */
 function buildAnalyzeRequest(message) {
   var files = message.getAttachments({ includeInlineImages: false }).slice(0, LIMITS.attachments);
