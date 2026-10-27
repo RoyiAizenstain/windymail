@@ -474,12 +474,12 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 ---
 
 ## Layer 7: Demo & Final README
-**Status:** Nearly done (27.10). Done: README with screenshots, demo script, secrets check. Remaining (You): the last demo emails and the fallback recording.
+**Status:** Done (27.10). README with screenshots, demo script built on the four emails already in the inbox, secrets check. Fallback recording dropped: the README screenshots are the fallback.
 
 - [x] Screenshots for README (27.10): Malicious, Suspicious, prompt injection, AI check, report sent, homepage; taken with Playwright from a separate Chrome profile the user signed in to by hand; panel only, never the inbox ([docs/screenshots/](screenshots/))
-- [ ] Demo email set prepared in the demo account. In the inbox (27.10): phishing test (Malicious, 100), gift-card favour "[WindyMail demo] Quick favour" (Suspicious, 50), gift-card email with a visible AI instruction (Malicious, 70), "Are you at your desk?" (Safe, 20, AI tags). Still to send (You): a plain Safe email, the hidden-instruction invoice, the Hebrew bank email (all optional)
+- [x] Demo email set in the demo inbox (27.10): "Are you at your desk?" (Safe, 20, AI tags), "[WindyMail demo] Quick favour" (Suspicious, 50), phishing test (Malicious, 100), gift-card email with a visible AI instruction (Malicious, 70)
 - [x] Demo script ([demo-script.md](demo-script.md)): demo emails that survive real sending, 7-minute flow, failure handling, likely questions
-- [ ] **You:** fallback recording, 2-3 minutes, following the demo script
+- [x] ~~Fallback recording~~ dropped (27.10): the six README screenshots are the fallback
 - [x] Pre-demo warm-up step in the demo script (call `/health`, run one scan)
 - [x] README: status, "What it does" with six screenshots, reporting and card images in Security, trade-offs, limitations, future work
 - [x] Repo check: no secrets committed (27.10: files and full git history scanned for API keys, Google tokens, private keys, webhook URLs; only `.env.example` tracked)
