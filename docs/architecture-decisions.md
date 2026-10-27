@@ -186,11 +186,24 @@ README.md
 * **Audit:** each analyst view logged with the hashed user ID (ADR-011), never the email.
 **Consequences:** Regular users get a weaker oracle; analysts keep the full picture, enforced by the server. Costs: the add-on must request the `email` scope, so every user shares their address with the backend (used only for this check, never logged or stored); the analyst list becomes a security-critical setting.
 
+## ADR-021: Attachment inspection by structural facts
+**Status:** Proposed (27.10), not built. Layer 8.
+**Context:** Attachments are a main malware route, but WindyMail only sees their names, types and sizes. Sending files to the backend would break "contents never leave Gmail" (ADR-013) and the 200 KB request cap, and would give the backend attacker files to parse.
+**Decision (proposed):**
+* The add-on reads a few structural facts per attachment: a type label from the first bytes, the zip encrypted flag, up to 50 archive entry names, whether a macro project exists, and (optional) PDF action flags. The file and its bytes never leave Gmail.
+* Fixed budgets in the add-on: under 10 MB, at most 5 attachments, 50 entries, one archive level, a time limit. A failure or budget hit marks the file "not inspected", shown as a low reason, never as clean.
+* The backend scores the facts with fixed wording; a file whose real type contradicts its name is decisive (minimum 70, ADR-010). Inner names follow ADR-017: never shown, logged, or sent to the AI.
+* A kill switch, `ATTACHMENT_INSPECTION`, so it can be turned off without a deploy.
+* No hash or reputation lookups (VirusTotal and similar): a lookup tells a third party which file the user received. Future work.
+**Consequences:** Catches disguised programs, password-protected archives, hidden archive contents and macro files, without moving file content. Costs: parsing attacker files in the add-on (bounded by budgets, run on Google's servers), archive entry names as new data reaching the backend, and add-on time inside Gmail's card deadline.
+
 ---
 
 ## Open Decisions
 
-None at the moment. ADR-010 was the last one; it is kept here with its history.
+* **ADR-021 (attachment inspection):** scope, where to parse, kill switch. See Layer 8, Step 1.
+
+ADR-010 is kept here with its history.
 
 ## ADR-010: Scoring model
 **Status:** Accepted (27.10, Layer 5)

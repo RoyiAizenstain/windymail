@@ -486,6 +486,48 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 
 ---
 
+## Layer 8: Attachment inspection
+**Status:** Planned (27.10), not started. Decisions open (Step 1). Optional before the deadline: everything up to Layer 7 is live and stable, and this touches both add-on and backend.
+**Stories:** US-03 · **ADRs:** 021 (proposed), 013, 017 · **Threats:** T13
+
+Today only an attachment's name, type and size are checked; its contents never leave Gmail (ADR-013). This layer adds structural facts about each file, read by the add-on, without sending the file.
+
+**Step 1: Decisions** (recommendation first)
+- [ ] **Decision:** scope. Recommended: checks 1-4 below; check 5 (PDF) only if time allows
+- [ ] **Decision:** where to parse. Recommended: in the add-on, sending facts only (keeps "contents never leave Gmail" and the 200 KB request cap). Alternative: send the first bytes of each file to the backend (simpler, but some file content leaves Gmail)
+- [ ] **Decision:** a kill switch, `ATTACHMENT_INSPECTION=false`, so it can be turned off on Render without a deploy. Recommended: yes
+
+**The checks**
+
+| # | Check | The add-on sends | Catches | Severity |
+|---|---|---|---|---|
+| 1 | Real type vs. claimed type | First 8 bytes as a type label (`exe`, `html`, `zip`, `pdf`, `ole`, `unknown`), never the bytes | `invoice.pdf` that is really a program, a web page or a zip | High, decisive (minimum 70) |
+| 2 | Password-protected archive | The zip's encrypted flag | Password in the email body so scanners can't look inside | Medium |
+| 3 | Inside archives | Up to 50 entry names from the zip's table of contents | `photos.zip` holding `photo.jpg.exe` or a `.lnk` | Same rules as top-level attachments |
+| 4 | Office macros | Whether `vbaProject.bin` exists in a `.docx` / `.xlsx` / `.pptx` | A macro file disguised as a normal Office file | High |
+| 5 | Active PDF (optional) | Yes/no for `/JavaScript`, `/OpenAction`, `/Launch`, `/EmbeddedFile` in the first 1 MB | PDFs that run code or drop files | Medium; `/Launch` high |
+
+**Step 2: Backend schema and rules**
+- [ ] `Attachment` gains optional `inspection` fields (type label, encrypted, entry names, macros, PDF flags), strict and capped; unknown values rejected
+- [ ] Rules and fixed wording in `messages.py`; inner names checked by the existing attachment rules; mismatch added to the decisive list (ADR-010)
+- [ ] Kill switch in `config.py`
+- Check: unit tests per rule; corpus gains at least three emails (disguised program, encrypted zip, macro .docx); `test_corpus.py` stays green
+
+**Step 3: Add-on inspection**
+- [ ] Budgets: attachments under 10 MB, at most 5 inspected, 50 archive entries, one archive level (no zip in a zip), a time limit for the whole step
+- [ ] Type label from the first bytes; zip directory read for names, encrypted flag and `vbaProject.bin`
+- [ ] Any failure or budget hit: the attachment is marked "not inspected", never treated as clean
+- Check: Node tests on byte samples (real zip, encrypted zip, OOXML with macros, MZ header, truncated and malformed files)
+
+**Step 4: Card and docs**
+- [ ] "Couldn't check inside an attachment" as a low reason when inspection fails, so it is never a silent gap
+- [ ] README (Signals, LLM safety: inner names never go to the AI), threat model T13, ADR-021 accepted
+- Check: Gmail test with real attachments sent to the demo inbox
+
+**Done when:** a disguised program, an encrypted zip and a macro document each get the right reason in Gmail; a malformed or huge attachment never breaks the card; tests and corpus pass.
+
+---
+
 ## Stretch: Herd Immunity
 **Status:** Optional — only if Layer 7 is done
 **Stories:** US-07 · **ADRs:** 009
