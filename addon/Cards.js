@@ -134,10 +134,16 @@ function buildDetailsSection(reasons) {
     .addWidget(CardService.newTextParagraph().setText('For security teams: what each check found.'));
   reasons.forEach(function (reason) {
     if (reason.details) {
-      section.addWidget(CardService.newTextParagraph().setText('• ' + toPlainText(reason.details)));
+      section.addWidget(CardService.newTextParagraph().setText(detailsLine(reason)));
     }
   });
   return section;
+}
+
+/** "• (+35) Authentication-Results: dmarc=fail": the points show how the score adds up. */
+function detailsLine(reason) {
+  var points = reason.points === null || reason.points === undefined ? '' : '(+' + reason.points + ') ';
+  return '• ' + points + toPlainText(reason.details);
 }
 
 /** Shown when the backend is unreachable, slow, or returns something invalid. */

@@ -358,7 +358,7 @@ Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Goo
 ---
 
 ## Layer 5: Scoring Model (simple)
-**Status:** In progress (27.10). Steps 1-3 done (ADR-010 accepted; 16-email corpus all correct, baseline 10); Step 4 (points on the card) next.
+**Status:** In progress (27.10). Steps 1-4 done (ADR-010 accepted; 16-email corpus all correct, baseline 10; AI impersonation label; points on the card); Step 5 (deploy and live check) next.
 **Stories:** US-02 · **ADRs:** 003, 010
 
 - [x] Weighted sum of signals, capped LLM contribution, clamp to 0-100 (provisional, Layers 2-3)
@@ -394,8 +394,8 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 - [x] Added after review (27.10): AI label `impersonation` (claims to come from someone the sending domain doesn't belong to), so impersonation is caught in any language and for any brand, on top of the rule-based brand list (English and Hebrew names). The AI now also receives the sender's display name and registered domain, never the full address (ADR-019 updated). Counted only when the sender checks missed it (`llm_impersonation`, medium, within the +20 cap); add-on wording "Pretends to come from a company, bank or person it isn't". 464 backend tests, 40 add-on checks
 
 **Step 4: Card**
-- [ ] Add-on: "Technical details" lines show "+35" per reason; validated as a whole number 0-100, otherwise left out (T8)
-- [ ] `logic.test.js` cases
+- [x] Add-on: "Technical details" lines show "(+35)" per reason; validated as a whole number 0-100, otherwise left out (T8); `points` added to the API contract
+- [x] `logic.test.js` cases: points shown, invalid values dropped (negative, over 100, fractions, strings, markup), zero shown (43 add-on checks)
 - Check: add-on checks pass.
 
 **Step 5: Deploy and live check**

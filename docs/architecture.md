@@ -90,7 +90,8 @@ Response:
       "severity": "low | medium | high",
       "text": "Replies will go to a different address than the sender.",
       "details": "Technical detail for analysts.",
-      "source": "rules | ai"
+      "source": "rules | ai",
+      "points": 35
     }
   ],
   "manipulation": ["urgency", "authority", "credentials", "financial", "impersonation"],
@@ -102,7 +103,7 @@ Response:
 ```
 
 * `partial: true` when the LLM step gave no answer: failure, no key, or switched off (ADR-005).
-* `ai` says whether the AI check ran and what it found, as labels only; the add-on words them itself and never shows text written by the model (ADR-019). `reasons[].source` is `ai` for reasons only the AI check found. `manipulation` combines the rules' and the AI's tactics.
+* `ai` says whether the AI check ran and what it found, as labels only; the add-on words them itself and never shows text written by the model (ADR-019). `reasons[].source` is `ai` for reasons only the AI check found. `reasons[].points` is what each reason added to the score; they add up to `score`, except when a decisive finding lifts it to 70, which `summary` then says (ADR-010). `manipulation` combines the rules' and the AI's tactics.
 * `herd` is `null` unless the Herd Immunity stretch goal is built and the mode is organization.
 * `mode` tells the add-on which actions to show: Report button in organization mode, "Report phishing" guidance in personal mode (ADR-015). Derived from whether `SOC_WEBHOOK_URL` is set.
 * Request strings and lists have upper bounds; unknown fields are rejected (422). Nothing from the request is echoed in the response, except normalized technical values (domains, IPs, file extensions, auth results) in `reasons[].details` (ADR-017).
