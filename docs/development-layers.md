@@ -292,17 +292,17 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 ---
 
 ## Layer 4: Backend Security (basic)
-**Status:** In progress (27.10). Steps 1-5 done (decisions in ADR-011; 413 size cap; 429 rate limit; errors that don't echo input; own request log without IPs); Step 6 (deploy and live check) next.
+**Status:** Done (27.10). Live on Render: 200 KB cap (413), token (401), per-user rate limit (429), errors that never echo input, own access log without client IPs. Verified live for 401, 413 and the logs; 429 covered by automated tests, optional live check open.
 **Stories:** US-11 · **ADRs:** 011
 
-- [ ] Google ID token verification on `/analyze` and `/report` (`/analyze` done in Layer 1, Step 7; confirm `/report` is covered when it is built)
-- [ ] Hashed user ID; per-user rate limiting
+- [x] Google ID token verification on `/analyze` (Layer 1, Step 7); `/report` must use the same `rate_limited_user` dependency when it is built (Layer 6)
+- [x] Hashed user ID; per-user rate limiting
 - [x] Payload size limits and strict schema (strict schema and per-field limits, Layer 1, 422; whole-request 200 KB cap, 413, Layer 4 Step 2)
 - [x] Timeouts on outbound calls (LLM: 5 s per attempt, 1 retry, Layer 3; the SOC webhook gets one when `/report` is built)
 - [x] Masking before LLM call (Layer 3: links, emails, phone numbers, long numbers; only subject and plain body sent)
-- [ ] Logging hygiene (incl. replacing uvicorn's default access log, which records client IPs, with ADR-011 fields only; the app logger is configured and logs the LLM outcome, model and latency only, Layer 3)
-- [ ] Tests: missing/invalid token → 401, oversized → 413, rate limit → 429
-- [ ] README: security section and threat model
+- [x] Logging hygiene (uvicorn's access log replaced by `app.access` without client IPs or query strings; errors by type only; LLM outcome and latency only)
+- [x] Tests: missing/invalid token → 401, oversized → 413, rate limit → 429
+- [x] README: security section and threat model
 
 **Done when:** unauthenticated and oversized requests are rejected; tests pass.
 
@@ -343,16 +343,17 @@ Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Goo
 - Check: tests pass.
 
 **Step 6: Deploy and live check**
-- [ ] Deploy (backend only; no add-on change)
-- [ ] Live: Render logs show the new access line and no client IPs; an oversized request gets 413; repeated requests get 429 (with a low test limit set temporarily in Render, then restored)
-- [ ] The add-on shows its plain "couldn't check" card for 413 and 429 (already true for any non-200)
+- [x] Deploy (backend only; no add-on change): `3a59361` live 27.10, 10:47 UTC
+- [x] Live: `/health` 200; no token 401 with the same ID in `X-Request-ID` and the log; a 250 KB request 413 in 0 ms, before the token check; Render logs show only `app.access` lines, no client IPs, no query string
+- [ ] Optional live 429 check: needs authenticated requests, so only from Gmail: set `RATE_LIMIT_PER_MINUTE=2` in Render, open three emails quickly (the third shows the "couldn't check" card), then remove the setting. Covered by automated tests
+- [x] The add-on shows its plain "couldn't check" card for 413 and 429 (confirmed in `Api.js`: any non-200 returns null → error card)
 - Check: normal Gmail use unaffected.
 
 **Step 7: Close the layer**
-- [ ] README: Security section (authentication, limits, rate limiting, error and log hygiene, secrets, what is not covered)
-- [ ] threat-model.md: T4, T5, T6 mitigations updated; Known Limitations: in-memory, single-instance rate limit; salt resets on restart
-- [ ] architecture.md: 413 and 429 marked as built
-- [ ] Tick the boxes above, set Layer 4 status to Done
+- [x] README: Security section (authentication, limits, rate limiting, error and log hygiene, secrets, what is not covered)
+- [x] threat-model.md: T4, T5, T6 mitigations updated; Known Limitations: in-memory, single-instance rate limit; salt resets on restart; Render log retention
+- [x] architecture.md: 413 and 429 marked as built
+- [x] Tick the boxes above, set Layer 4 status to Done
 
 ---
 

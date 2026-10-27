@@ -98,7 +98,25 @@ An LLM (Claude Haiku, `claude-haiku-5-5`) adds what fixed rules can't: recognizi
 _To be written (Layer 5)._
 
 ## Security
-_To be written (Layer 4)._
+
+The backend is reachable from the internet, receives attacker-written email, and spends LLM budget per request, so it is built to be safe to expose ([ADR-011](docs/architecture-decisions.md), [threat model](docs/threat-model.md)). Layers apply in this order, cheapest rejection first:
+
+| Protection | What it does | Response |
+|---|---|---|
+| **Size cap** | Whole request capped at 200 KB, checked from `Content-Length` before the body is read and again while reading, so a request that hides or lies about its size is stopped too. Runs before the token check, so a huge request costs nothing | 413 |
+| **Authentication** | Every request except `/health` carries a Google-signed ID token; signature, issuer, expiry and audience (the add-on's OAuth client ID) are verified. No shared secret exists to leak | 401 |
+| **Rate limit** | 20 requests per minute per user (`RATE_LIMIT_PER_MINUTE`), checked right after the token and before any analysis, so it also caps LLM spend per user | 429 + `Retry-After` |
+| **Strict input** | Unknown fields rejected, every string and list bounded | 422 |
+| **No echo** | Error responses never contain submitted values: a 422 gives only the field location and error type; any crash becomes a generic 500 | 422 / 500 |
+| **Outbound calls** | Explicit timeouts (LLM 5 s with one retry, Google certificates 5 s); URLs from emails are never fetched | — |
+
+**Privacy in logs.** One line per request: request ID, method, path without query string, status, latency, and the user ID hashed with a salt generated at startup (never stored). No client IP (uvicorn's default access log is replaced), no headers, no tokens, no email content; the LLM step logs its outcome and latency only, and errors are logged by type, never by message. The request ID is returned as `X-Request-ID`, so a failed check can be matched to its log line.
+
+**Secrets.** Only in environment variables (Render dashboard): `GOOGLE_CLIENT_ID`, `ANTHROPIC_API_KEY` with a spend limit set at Anthropic. `.env` is gitignored; `.env.example` documents every setting. The backend refuses to start without `GOOGLE_CLIENT_ID`.
+
+**In the add-on.** Least-privilege Gmail scopes (only the open message), an outbound allowlist limited to the backend, response validation before rendering, and every untrusted string escaped (see [Architecture](#architecture)).
+
+**Not covered.** The rate limit is in memory on a single instance and resets on restart or redeploy, as do the hash salt and its counters. Render's free tier keeps logs for a limited time, which suits a demo but is not an audit trail. Email text goes to Anthropic while the AI check is on (see [LLM safety](#llm-safety)).
 
 ## Running locally
 

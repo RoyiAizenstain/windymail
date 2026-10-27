@@ -50,7 +50,7 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 **Wednesday 28.10.2026, 11:00.** Scope cut per ADR-013. Herd Immunity is the only stretch goal.
 
 ## Open items
-* **Status (27.10):** Layers 1-3 done (skeleton, rule engine, bounded LLM); Layer 4 (backend security) next. Live A/B prompt-injection email test from Layer 3 not yet reported.
+* **Status (27.10):** Layers 1-4 done (skeleton, rule engine, bounded LLM, backend security); Layer 5 (scoring) next. Open live checks: the A/B prompt-injection email test (Layer 3) and an optional 429 test from Gmail (Layer 4).
 * **Layer 4 built** in `app/security.py`: 200 KB cap (413), per-user rate limit (429), 422 and 500 responses that never echo input, own access log without client IPs (`app.access`, `X-Request-ID`).
 * **Scoring (ADR-010):** provisional model live (high 35 / medium 15 / low 5 per reason, LLM +20 cap); final weights still open.
 * Hosting decided: Render free tier with keep-warm ping (ADR-012).
