@@ -40,7 +40,7 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 * **Backend tests:** `cd backend && .venv/Scripts/python -m pytest -q && .venv/Scripts/ruff check . && .venv/Scripts/ruff format --check .` (Windows venv; the system Python has no pytest). Tests never call the real LLM: `conftest.py` clears the LLM settings.
 * **Add-on checks:** `node addon/test/logic.test.js` from the repo root.
 * **Deploy:** `git push` to `main` → Render redeploys the backend. `clasp push` from the repo root → updates the add-on. When both change: backend first, wait until Render shows it live, then `clasp push` (the backend rejects request fields it doesn't know).
-* **Live check:** Render logs carry one line per LLM call: `llm: outcome=ok|skipped:no_key|timeout|status:… model=… latency_ms=…`.
+* **Live check:** Render logs carry one line per request (`app.access: request id=… method=… path=… status=… latency_ms=… user=<hash>`) and one per LLM call (`llm: outcome=ok|skipped:no_key|timeout|status:… model=… latency_ms=…`).
 
 ## Verdict thresholds
 * 🟢 0-29 Safe (☀️ Clear skies) · 🟡 30-69 Suspicious (🌥️ Storm watch) · 🔴 70-100 Malicious (⛈️ Storm warning)
@@ -51,6 +51,6 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 
 ## Open items
 * **Status (27.10):** Layers 1-3 done (skeleton, rule engine, bounded LLM); Layer 4 (backend security) next. Live A/B prompt-injection email test from Layer 3 not yet reported.
-* **Not built yet (Layer 4):** replacing uvicorn's access log (it records client IPs). Built in `app/security.py`: 200 KB cap (413), per-user rate limit (429), 422 and 500 responses that never echo input.
+* **Layer 4 built** in `app/security.py`: 200 KB cap (413), per-user rate limit (429), 422 and 500 responses that never echo input, own access log without client IPs (`app.access`, `X-Request-ID`).
 * **Scoring (ADR-010):** provisional model live (high 35 / medium 15 / low 5 per reason, LLM +20 cap); final weights still open.
 * Hosting decided: Render free tier with keep-warm ping (ADR-012).

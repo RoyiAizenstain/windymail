@@ -15,6 +15,7 @@ from app.analysis import analyze as analyze_email
 from app.config import get_settings
 from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse
 from app.security import (
+    AccessLog,
     BodySizeLimit,
     ErrorShield,
     RateLimiter,
@@ -32,6 +33,8 @@ def _configure_logging() -> None:
         handler.setFormatter(logging.Formatter("%(levelname)s:     %(name)s: %(message)s"))
         logger.addHandler(handler)
     logger.setLevel(logging.INFO)
+    # Replaced by app.access, which leaves out client IPs and query strings (ADR-011).
+    logging.getLogger("uvicorn.access").disabled = True
 
 
 def create_app() -> FastAPI:
@@ -44,10 +47,12 @@ def create_app() -> FastAPI:
         redoc_url=None,
         openapi_url="/openapi.json" if docs_enabled else None,
     )
-    # Middleware added last runs first: ErrorShield wraps everything, then the size cap
-    # runs before anything reads the body (ADR-011).
+    # Middleware added last runs first: AccessLog sees every request, ErrorShield turns
+    # any crash into a 500 inside it, then the size cap runs before anything reads the
+    # body (ADR-011).
     app.add_middleware(BodySizeLimit)
     app.add_middleware(ErrorShield)
+    app.add_middleware(AccessLog)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     # Per app instance, so each test client starts with fresh counters.
     app.state.rate_limiter = RateLimiter(settings.rate_limit_per_minute)

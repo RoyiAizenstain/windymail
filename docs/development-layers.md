@@ -292,7 +292,7 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 ---
 
 ## Layer 4: Backend Security (basic)
-**Status:** In progress (27.10). Steps 1-4 done (decisions in ADR-011; 413 size cap; 429 rate limit; errors that don't echo input); Step 5 (request logging) next.
+**Status:** In progress (27.10). Steps 1-5 done (decisions in ADR-011; 413 size cap; 429 rate limit; errors that don't echo input; own request log without IPs); Step 6 (deploy and live check) next.
 **Stories:** US-11 · **ADRs:** 011
 
 - [ ] Google ID token verification on `/analyze` and `/report` (`/analyze` done in Layer 1, Step 7; confirm `/report` is covered when it is built)
@@ -337,9 +337,9 @@ Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Goo
 - Check: tests pass.
 
 **Step 5: Request logging**
-- [ ] Middleware: request ID (random), method, path, status, latency in ms, hashed user ID when authenticated; `X-Request-ID` response header so a user-visible error can be matched to a log line
-- [ ] uvicorn access logger disabled in code
-- [ ] Tests: a request produces exactly one access line with those fields; no client IP, no query string, no token, no body content in any log line (including the LLM line and errors)
+- [x] `AccessLog` middleware (outermost): request ID (8 hex characters), method, path without query string, status, latency in ms, hashed user ID when the token was valid (shared through the request state); `X-Request-ID` response header; crashes logged as `error: id=… type=…` with the same ID
+- [x] uvicorn access logger disabled in code; verified on a real local uvicorn run: no IP line, one `app.access` line per request, IDs match the header
+- [x] Tests: exactly one access line with those fields and the right user hash; no client IP, query string, token, raw user ID or body content in any server log line; 401, 413 and `/health` logged with `user=-`; a crash gives one 500 line and an error line with the same ID (5 new, 426 total)
 - Check: tests pass.
 
 **Step 6: Deploy and live check**

@@ -129,7 +129,8 @@ class ErrorShield:
         try:
             await self.app(scope, receive, tracking_send)
         except Exception as exc:  # noqa: BLE001 - the point is to catch everything
-            logger.error("error: type=%s path=%s", type(exc).__name__, scope.get("path"))
+            request_id = scope.get("state", {}).get("request_id", "-")
+            logger.error("error: id=%s type=%s", request_id, type(exc).__name__)
             if not started:
                 await JSONResponse({"detail": "Internal error"}, 500)(scope, receive, send)
 
@@ -188,3 +189,50 @@ class BodySizeLimit:
             # Raised outside a route (e.g. by another middleware reading the body).
             if not started:
                 await JSONResponse(_TOO_LARGE, 413)(scope, receive, send)
+
+
+access_logger = logging.getLogger("app.access")
+
+
+class AccessLog:
+    """One line per request, replacing uvicorn's access log (ADR-011).
+
+    Request ID, method, path (no query string), status, latency and the hashed user
+    when the token was valid. No client IP, no headers, no body. The request ID is
+    returned as `X-Request-ID`, so a user-visible error can be matched to its line.
+    """
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+        request_id = secrets.token_hex(4)
+        # Shared with request.state: the rate limit dependency adds the user hash.
+        state = scope.setdefault("state", {})
+        state["request_id"] = request_id
+        started = time.monotonic()
+        status = 0
+
+        async def tagged_send(message: Message) -> None:
+            nonlocal status
+            if message["type"] == "http.response.start":
+                status = message["status"]
+                message["headers"] = [*message.get("headers", []),
+                                      (b"x-request-id", request_id.encode())]  # fmt: skip
+            await send(message)
+
+        try:
+            await self.app(scope, receive, tagged_send)
+        finally:
+            access_logger.info(
+                "request id=%s method=%s path=%s status=%d latency_ms=%d user=%s",
+                request_id,
+                scope.get("method", "-"),
+                scope.get("path", "-")[:100],
+                status,
+                int((time.monotonic() - started) * 1000),
+                state.get("user_hash", "-"),
+            )

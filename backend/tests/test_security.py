@@ -1,5 +1,7 @@
 import asyncio
 import json
+import logging
+import re
 
 import pytest
 from fastapi.testclient import TestClient
@@ -235,3 +237,68 @@ def test_crash_is_generic_500_logged_by_type_only(
     assert response.status_code == 500
     assert response.json() == {"detail": "Internal error"}
     assert "RuntimeError" in caplog.text and MARKER not in caplog.text
+
+
+# Request log (replaces uvicorn's access log)
+
+
+def access_lines(caplog: pytest.LogCaptureFixture) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.name == "app.access"]
+
+
+def test_one_line_per_request_with_the_agreed_fields(
+    client: TestClient, valid_request: dict, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO):
+        response = client.post("/api/v1/analyze?token=QUERY-SECRET", json=valid_request)
+    [line] = access_lines(caplog)
+    request_id = response.headers["X-Request-ID"]
+    assert re.fullmatch(r"[0-9a-f]{8}", request_id)
+    assert re.fullmatch(
+        rf"request id={request_id} method=POST path=/api/v1/analyze status=200 "
+        r"latency_ms=\d+ user=[0-9a-f]{16}",
+        line,
+    )
+    assert line.endswith(hash_user("user-123"))  # the rate limit dependency's hash
+
+
+def test_log_never_holds_ip_query_token_or_content(
+    client: TestClient, valid_request: dict, caplog: pytest.LogCaptureFixture
+) -> None:
+    body = {**valid_request, "subject": MARKER, "body_text": MARKER}
+    with caplog.at_level(logging.DEBUG):
+        client.post("/api/v1/analyze?token=QUERY-SECRET", json=body)
+    # Server-side loggers only: the test client's own HTTP library logs the URL it sent.
+    server = "\n".join(r.getMessage() for r in caplog.records if not r.name.startswith("httpx"))
+    assert "request id=" in server
+    for secret in ("testclient", "QUERY-SECRET", "valid-token", MARKER, "user-123"):
+        assert secret not in server
+
+
+def test_unauthenticated_and_rejected_requests_are_logged(
+    anon_client: TestClient, valid_request: dict, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.INFO):
+        anon_client.post("/api/v1/analyze", json=valid_request)
+        anon_client.post("/api/v1/analyze", content=b"x" * (MAX_REQUEST_BYTES + 1), headers=JSON)
+        anon_client.get("/health")
+    lines = access_lines(caplog)
+    assert [re.search(r"status=(\d+)", line)[1] for line in lines] == ["401", "413", "200"]
+    assert all(line.endswith("user=-") for line in lines)
+
+
+def test_crash_logged_once_with_matching_request_id(
+    monkeypatch: pytest.MonkeyPatch, valid_request: dict, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setattr(main, "analyze_email", lambda request: 1 / 0)
+    client = TestClient(create_app(), headers=AUTH_HEADERS)
+    with caplog.at_level(logging.INFO):
+        response = client.post("/api/v1/analyze", json=valid_request)
+    request_id = response.headers["X-Request-ID"]
+    [access] = access_lines(caplog)
+    assert f"id={request_id}" in access and "status=500" in access
+    assert f"error: id={request_id} type=ZeroDivisionError" in caplog.text
+
+
+def test_uvicorn_access_log_is_off(client: TestClient) -> None:
+    assert logging.getLogger("uvicorn.access").disabled is True
