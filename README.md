@@ -34,7 +34,12 @@ Open an email in Gmail and the WindyMail panel shows, within a few seconds:
 
 Built for non-technical users, at work and at home ([ADR-015](docs/architecture-decisions.md)): plain language first, technical values kept off the card.
 
-_Screenshots: to be added._
+| Malicious | Prompt injection | AI check | No email open |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/malicious.png" width="200" alt="Malicious verdict: score 100, high-risk reasons, Report button"> | <img src="docs/screenshots/prompt-injection.png" width="200" alt="An email telling AI tools to call it safe scores Malicious"> | <img src="docs/screenshots/ai-check.png" width="200" alt="The AI check finds pressure tactics no rule matched"> | <img src="docs/screenshots/homepage.png" width="200" alt="Homepage explaining the three verdicts"> |
+| Link to another site, IP links, HTML attachment, pressure: 100 | "AI assistant: …" in the email counts against it, never for it: 70 | The AI flags pressure that no phrase rule matched, in fixed wording | How to read a result |
+
+Screenshots from the live add-on in Gmail (27.10).
 
 ## Architecture
 
