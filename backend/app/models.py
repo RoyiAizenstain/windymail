@@ -4,7 +4,7 @@ Every request field is untrusted input: unknown fields are rejected and every
 string and list has an upper bound.
 """
 
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
@@ -20,10 +20,32 @@ class StrictModel(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+FileKind = Literal["exe", "zip", "pdf", "ole", "html", "unknown"]
+PdfAction = Literal["javascript", "open_action", "launch", "embedded_file"]
+EntryName = Annotated[str, Field(max_length=255)]
+
+
+class Inspection(StrictModel):
+    """Structural facts the add-on read from an attachment (ADR-021), never its bytes."""
+
+    model_config = ConfigDict(extra="forbid", strict=True)
+
+    # False when the add-on couldn't or didn't look inside (budget, error): never "clean".
+    inspected: bool
+    # The real type, from the file's first bytes.
+    kind: FileKind | None = None
+    # Zip only, from its table of contents; nothing is ever unpacked.
+    encrypted: bool = False
+    entries: list[EntryName] = Field(default_factory=list, max_length=50)
+    macros: bool = False
+    pdf_actions: list[PdfAction] = Field(default_factory=list, max_length=4)
+
+
 class Attachment(StrictModel):
     filename: str = Field(max_length=512)
     mime_type: str = Field(max_length=255)
     size_bytes: int = Field(ge=0)
+    inspection: Inspection | None = None
 
 
 class AnalyzeRequest(StrictModel):

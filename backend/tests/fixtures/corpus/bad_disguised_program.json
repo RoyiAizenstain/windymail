@@ -1,0 +1,24 @@
+{
+  "about": "A program named as a PDF: the name passes every name check, the first bytes say it is a Windows program (ADR-021).",
+  "request": {
+    "message_id": "bad_disguised_program",
+    "from": "Payroll <payroll@northwind-hr.net>",
+    "reply_to": null,
+    "subject": "Salary review 2026",
+    "auth_results": "mx.google.com; dkim=pass header.i=@northwind-hr.net; spf=pass smtp.mailfrom=bounce@northwind-hr.net; dmarc=pass (p=REJECT sp=REJECT dis=NONE) header.from=northwind-hr.net",
+    "body_text": "Please review the attached salary update before Friday.",
+    "body_html": null,
+    "attachments": [
+      {
+        "filename": "Salary_Review_2026.pdf",
+        "mime_type": "application/pdf",
+        "size_bytes": 412000,
+        "inspection": {"inspected": true, "kind": "exe"}
+      }
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "malicious"
+  }
+}

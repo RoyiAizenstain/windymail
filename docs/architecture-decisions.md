@@ -187,9 +187,9 @@ README.md
 **Consequences:** Regular users get a weaker oracle; analysts keep the full picture, enforced by the server. Costs: the add-on must request the `email` scope, so every user shares their address with the backend (used only for this check, never logged or stored); the analyst list becomes a security-critical setting.
 
 ## ADR-021: Attachment inspection by structural facts
-**Status:** Proposed (27.10), not built. Layer 8.
+**Status:** Accepted (27.10), built in Layer 8.
 **Context:** Attachments are a main malware route, but WindyMail only sees their names, types and sizes. Sending files to the backend would break "contents never leave Gmail" (ADR-013) and the 200 KB request cap, and would give the backend attacker files to parse.
-**Decision (proposed):**
+**Decision:**
 * The add-on reads a few structural facts per attachment: a type label from the first bytes, the zip encrypted flag, up to 50 archive entry names, whether a macro project exists, and (optional) PDF action flags. The file and its bytes never leave Gmail.
 * Fixed budgets in the add-on: under 10 MB, at most 5 attachments, 50 entries, one archive level, a time limit. A failure or budget hit marks the file "not inspected", shown as a low reason, never as clean.
 * The backend scores the facts with fixed wording; a file whose real type contradicts its name is decisive (minimum 70, ADR-010). Inner names follow ADR-017: never shown, logged, or sent to the AI.
@@ -201,9 +201,7 @@ README.md
 
 ## Open Decisions
 
-* **ADR-021 (attachment inspection):** scope, where to parse, kill switch. See Layer 8, Step 1.
-
-ADR-010 is kept here with its history.
+None at the moment. ADR-021 was decided in Layer 8; ADR-010 is kept here with its history.
 
 ## ADR-010: Scoring model
 **Status:** Accepted (27.10, Layer 5)

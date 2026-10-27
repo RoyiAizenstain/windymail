@@ -27,6 +27,8 @@ DECISIVE = {
     "attachment_disguised_name",
     # Hiding a message for a scanner from the reader exists only to fool the scanner.
     "ai_instructions_hidden",
+    # A program, web page or archive named as a trusted document exists only to disguise it.
+    "attachment_type_mismatch",
 }
 
 

@@ -91,6 +91,7 @@ The backend runs deterministic checks on every email ([`backend/app/signals/`](b
 | **Lookalike domains** | In the sender, Reply-To and link destinations: swapped characters (`paypa1`, `rn`→`m`), one-letter typos, other alphabets and punycode, a brand inside another domain (`paypal.com.secure-login.xyz`, `paypal-support.com`), from a list of ~20 commonly impersonated brands | High for a trick (swap, typo, punycode); medium for a brand name on a domain it doesn't own or a mix of alphabets |
 | **Links** | Visible text that is an address but goes somewhere else; destinations that are IP addresses, including decimal and hex forms (`http://3232235777`); URL shorteners; `javascript:` and `data:` links | High, medium, low, high |
 | **Attachments** | Programs and scripts (`.exe`, `.js`, `.lnk`, ...), double extensions (`invoice.pdf.exe`), the right-to-left override trick in names: high. Macro Office files, disk images, HTML and SVG attachments (HTML smuggling): medium. Archives: low | By type |
+| **Inside attachments** ([ADR-021](docs/architecture-decisions.md)) | The add-on reads a few facts from each file and sends only those, never the file: its real type from the first bytes, a zip's table of contents (names, encrypted flag, Office macro project), PDF actions. Nothing is unpacked, so a zip bomb has nothing to explode. Budgets: 5 files, 10 MB each, 50 archive names, 4 seconds | A program, web page or zip named as a trusted document: high, decisive (minimum 70). Risky file inside an archive, macros in a normally named Office file: high. Password-protected archive, PDF that runs actions on open: medium. Not inspected (over budget, unreadable): low, never treated as clean |
 | **Hidden content** | Text or links hidden with inline styles (`display:none`, `font-size:0`, ...); short hidden preview text, normal in newsletters, is ignored | Medium with a link, low otherwise |
 | **Language** (English, Hebrew) | Pressure tactics by phrase: urgency, authority, requests for passwords or codes, requests for money; phrases aimed at an AI ("ignore previous instructions"). See [LLM safety](#llm-safety) | Any tactic alone: low. Pressure with a request: medium. AI-directed instructions: medium, high when hidden |
 | **Size** | Body trimmed to fit the request budget | Low ("too long to check fully"), so trimming is never a silent gap |
@@ -99,7 +100,7 @@ The backend runs deterministic checks on every email ([`backend/app/signals/`](b
 
 **Fail safe.** If a check crashes on a crafted email, it adds "Some checks couldn't run" and never lowers the score; the error type is logged, never its message (which could contain email content).
 
-**Known blind spots.** Content hidden by stylesheets rather than inline styles. Proofpoint and Mimecast link wrappers (the target is encoded or held on their servers). A spoofed sender on a domain with DMARC policy `p=none` gets only a medium sender reason, so the verdict then rests on the other checks. Text past the size budget is not checked. The domain suffix list is bundled with the backend, so very new top-level domains may be parsed less precisely. Attachment contents are never opened, only names and types.
+**Known blind spots.** Content hidden by stylesheets rather than inline styles. Proofpoint and Mimecast link wrappers (the target is encoded or held on their servers). A spoofed sender on a domain with DMARC policy `p=none` gets only a medium sender reason, so the verdict then rests on the other checks. Text past the size budget is not checked. The domain suffix list is bundled with the backend, so very new top-level domains may be parsed less precisely. Inside attachments, only the facts above: no decompression, no nested archives, no old-style (`.doc`) macro check, and PDF actions written in escaped form (`/J#61vaScript`) are missed.
 
 ## LLM safety
 
@@ -149,7 +150,7 @@ The score is additive and explainable: every reason carries its points in the AP
 | The link's domain does the same | Worth checking | 15 |
 | **Score** | | **80 · ⛈️ Malicious** |
 
-**How the weights were checked.** They are hand-set, not learned. A fixed set of 16 realistic emails, English and Hebrew, legitimate and malicious, each with the verdict it should get, runs as a test ([`backend/tests/fixtures/corpus/`](backend/tests/fixtures/corpus/); `pytest tests/test_corpus.py -s` prints the score table). On the first run, all 9 legitimate emails were Safe but 6 of 7 malicious ones were too mild; the rules above fixed them, and all 16 now pass. One case is Suspicious by decision: a fake Microsoft warning with a mismatched link (55) has two strong signs but neither decisive, and a special combination rule would make the score harder to explain. This guards against regressions; it is not a measured error rate.
+**How the weights were checked.** They are hand-set, not learned. A fixed set of 18 realistic emails, English and Hebrew, legitimate and malicious, each with the verdict it should get, runs as a test ([`backend/tests/fixtures/corpus/`](backend/tests/fixtures/corpus/); `pytest tests/test_corpus.py -s` prints the score table). On the first run, all 9 legitimate emails were Safe but 6 of 7 malicious ones were too mild; the rules above fixed them, and all 16 passed. Two more came with attachment inspection (a program named as a PDF, ordinary Office files); all 18 pass. One case is Suspicious by decision: a fake Microsoft warning with a mismatched link (55) has two strong signs but neither decisive, and a special combination rule would make the score harder to explain. This guards against regressions; it is not a measured error rate.
 
 ## Security
 
@@ -203,6 +204,7 @@ node addon/test/logic.test.js     # from the repo root: add-on request/response/
 | `ANTHROPIC_API_KEY` | No | Enables the AI check. Without it the backend runs on its rules only and marks results `partial`. Set a monthly spend limit on the key in the Anthropic Console. |
 | `LLM_ENABLED` | No | `false` turns the AI check off without a deploy. Default `true`. |
 | `LLM_MODEL` | No | Default `claude-haiku-5-5` ([ADR-016](docs/architecture-decisions.md)). |
+| `ATTACHMENT_INSPECTION` | No | `false` ignores the add-on's attachment facts without a deploy. Default `true` ([ADR-021](docs/architecture-decisions.md)). |
 
 ## Deployment
 
@@ -224,7 +226,7 @@ Google shows an "unverified app" warning for a personal test deployment; that is
 * **Rules first, AI second.** The deterministic checks decide most of the score and are testable and explainable; the AI adds at most 20 points and never subtracts ([ADR-003](docs/architecture-decisions.md)). It catches less nuance than letting a model judge, but a fooled model can't make a malicious email look safe.
 * **Labels, not words, from the AI** ([ADR-019](docs/architecture-decisions.md)). The user sees which tactics were found, not a tailored explanation, so the attacker's text can never reach the card through the model.
 * **One bounded call, not an agent.** Faster, cheaper and explainable; no tool use an email could steer (see [LLM safety](#llm-safety)).
-* **Hand-set weights,** checked against 16 realistic emails, not learned from data. Easy to explain and audit; not a measured error rate.
+* **Hand-set weights,** checked against 18 realistic emails, not learned from data. Easy to explain and audit; not a measured error rate.
 * **Explainable card vs. an attacker's test lab.** The card shows plain-language reasons and the total, but not the parsed values or per-reason points (threat T12). The score itself still tells an attacker whether a draft passed.
 * **Manual reporting only** ([ADR-008](docs/architecture-decisions.md)). No automatic alerts, so no flood of false positives, but the security team sees only what users report.
 * **Free hosting.** Render's free tier sleeps when idle; a keep-warm ping covers it ([ADR-012](docs/architecture-decisions.md)). One instance, in-memory state.
@@ -232,7 +234,7 @@ Google shows an "unverified app" warning for a personal test deployment; that is
 **Limitations**
 * **Single instance, in-memory state.** The rate limit, the user-hash salt and its counters reset on restart or redeploy, and don't scale across instances.
 * **The AI check is not fully deterministic.** The same email can get one more or one fewer AI finding between runs. It can only add, so the verdict rarely changes, and the rules alone decide most scores.
-* **What the checks can't see:** attachment contents (names and types only), content hidden by stylesheets, Proofpoint and Mimecast link wrappers, text past the size budget, and the age or reputation of a domain (links are never fetched). See [Signals](#signals).
+* **What the checks can't see:** what's packed inside attachments (only a few structural facts are read), content hidden by stylesheets, Proofpoint and Mimecast link wrappers, text past the size budget, and the age or reputation of a domain (links are never fetched). See [Signals](#signals).
 * **Email text goes to Anthropic** while the AI check is on, after best-effort masking of links, addresses and numbers. Names and numbers written out in words pass through.
 * **The reporter is a hash,** valid within one backend instance; a real security team would need the reporter's address, a privacy choice left to the organization.
 * **Brand list:** about 20 commonly impersonated brands, English and Hebrew wording only.

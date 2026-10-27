@@ -1,10 +1,12 @@
-"""Attachments whose type is risky to open (US-03). Names and types only: attachment
-contents never leave Gmail (ADR-013, threat model "Out of Scope").
+"""Attachments whose type is risky to open (US-03).
 
-Only the extension is reported, never the filename (ADR-017).
+Names and types, plus the structural facts the add-on read from each file (ADR-021):
+its real type, a zip's table of contents, PDF actions. The file itself never leaves
+Gmail. Only extensions and fixed labels are reported, never a filename (ADR-017).
 """
 
-from app.models import AnalyzeRequest
+from app.config import get_settings
+from app.models import AnalyzeRequest, Attachment
 from app.signals.base import Finding
 
 EXECUTABLE = {
@@ -32,13 +34,69 @@ _BY_TYPE = (
 )
 
 
+# Office formats that are zip files inside; any other trusted name on a zip is a disguise.
+OOXML = {"docx", "xlsx", "pptx", "docm", "xlsm", "pptm", "dotx", "dotm", "xltx", "xltm"}
+# Names that never hide a program or a web page in normal use.
+_NOT_A_PAGE = {"txt", "csv", "xml"}
+
+
 def check(request: AnalyzeRequest) -> list[Finding]:
+    inspect = get_settings().attachment_inspection
     findings = []
     for attachment in request.attachments:
         finding = assess(attachment.filename)
         if finding:
             findings.append(finding)
+        if inspect and attachment.inspection is not None:
+            findings += assess_inspection(attachment)
     return findings
+
+
+def assess_inspection(attachment: Attachment) -> list[Finding]:
+    """Findings from what the add-on saw inside the file (ADR-021)."""
+    facts = attachment.inspection
+    if facts is None:
+        return []
+    if not facts.inspected:
+        # Never treated as clean: the user is told the inside wasn't checked.
+        return [Finding("attachment_not_inspected")]
+    findings = []
+    extension = _extension(attachment.filename)
+    if _disguised(extension, facts.kind):
+        findings.append(
+            Finding("attachment_type_mismatch", (f".{extension}", f"real:{facts.kind}"))
+        )
+    if facts.encrypted:
+        findings.append(Finding("attachment_encrypted_archive"))
+    inner = [assess(name.rsplit("/", 1)[-1]) for name in facts.entries]
+    risky = [f for f in inner if f and f.id != "attachment_archive"]
+    if risky:
+        findings.append(
+            Finding("attachment_archive_risky_file", tuple(v for f in risky for v in f.values))
+        )
+    if facts.macros and extension not in MACRO:
+        findings.append(Finding("attachment_hidden_macros", (f".{extension}",)))
+    if facts.pdf_actions:
+        findings.append(Finding("attachment_pdf_active", tuple(facts.pdf_actions)))
+    return findings
+
+
+def _disguised(extension: str, kind: str | None) -> bool:
+    """The real type contradicts a name people trust: no legitimate file does this."""
+    if extension not in DECOY:
+        return False
+    if kind == "exe":
+        return True
+    if kind == "html":
+        return extension not in _NOT_A_PAGE
+    if kind == "zip":
+        return extension not in OOXML
+    return False
+
+
+def _extension(filename: str) -> str:
+    parts = filename.lower().rstrip(". ").rsplit(".", 1)
+    return parts[1].strip() if len(parts) == 2 else ""
 
 
 def assess(filename: str) -> Finding | None:

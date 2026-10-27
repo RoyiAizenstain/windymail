@@ -29,5 +29,19 @@ var LIMITS = {
  */
 var MAX_REQUEST_BYTES = 190000;
 
+/**
+ * Attachment inspection budgets (ADR-021). The add-on reads facts from each file
+ * (real type, a zip's table of contents, PDF actions), never unpacks anything, and
+ * sends only the facts. Past a budget, a file is marked "not inspected", never clean.
+ */
+var INSPECT = {
+  maxFiles: 5,
+  maxBytes: 10 * 1024 * 1024,
+  maxEntries: 50, // archive entry names, across all attachments
+  maxEntryChars: 200,
+  pdfScanBytes: 1024 * 1024,
+  timeBudgetMs: 4000,
+};
+
 /** Display cap for any single untrusted value shown in a card. */
 var MAX_DISPLAY_CHARS = 200;

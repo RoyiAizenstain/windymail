@@ -90,4 +90,4 @@ As an admin, I want the backend to accept only authenticated requests and protec
 **US-12: Configure integrations without code changes** · 🔄 Changed
 As an admin, I want the SOC webhook, thresholds, and API keys to be configurable, so I can adapt the deployment.
 * ~~All configured through environment variables.~~
-* **Changed (27.10):** integrations and operations are environment variables: `SOC_WEBHOOK_URL`, `ANTHROPIC_API_KEY`, `LLM_ENABLED`, `LLM_MODEL`, `RATE_LIMIT_PER_MINUTE`, `GOOGLE_CLIENT_ID`. Verdict thresholds (30 / 70) and scoring weights stay in code on purpose: a changed environment variable could quietly weaken detection, while a code change must pass the 16-email test set and review (ADR-010).
+* **Changed (27.10):** integrations and operations are environment variables: `SOC_WEBHOOK_URL`, `ANTHROPIC_API_KEY`, `LLM_ENABLED`, `LLM_MODEL`, `RATE_LIMIT_PER_MINUTE`, `GOOGLE_CLIENT_ID`. Verdict thresholds (30 / 70) and scoring weights stay in code on purpose: a changed environment variable could quietly weaken detection, while a code change must pass the 18-email test set and review (ADR-010).

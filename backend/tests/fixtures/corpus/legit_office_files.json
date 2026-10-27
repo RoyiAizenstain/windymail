@@ -1,0 +1,24 @@
+{
+  "about": "Ordinary Office files and a PDF, inspected: Office files are zips inside, and that must not look like a disguise.",
+  "request": {
+    "message_id": "legit_office_files",
+    "from": "Dana Levi <dana.levi@northwind.io>",
+    "reply_to": null,
+    "subject": "Q4 planning material",
+    "auth_results": "mx.google.com; dkim=pass header.i=@northwind.io; spf=pass smtp.mailfrom=dana.levi@northwind.io; dmarc=pass (p=QUARANTINE sp=QUARANTINE dis=NONE) header.from=northwind.io",
+    "body_text": "Hi all, attached are the deck, the budget and last quarter's report for Wednesday. Dana",
+    "body_html": null,
+    "attachments": [
+      {"filename": "Q4-plan.pptx", "mime_type": "application/vnd.openxmlformats-officedocument.presentationml.presentation", "size_bytes": 2400000,
+       "inspection": {"inspected": true, "kind": "zip", "entries": ["[Content_Types].xml", "ppt/presentation.xml", "ppt/slides/slide1.xml"]}},
+      {"filename": "budget.xlsx", "mime_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "size_bytes": 81000,
+       "inspection": {"inspected": true, "kind": "zip", "entries": ["[Content_Types].xml", "xl/workbook.xml", "xl/worksheets/sheet1.xml"]}},
+      {"filename": "Q3-report.pdf", "mime_type": "application/pdf", "size_bytes": 530000,
+       "inspection": {"inspected": true, "kind": "pdf"}}
+    ],
+    "truncated": false
+  },
+  "expect": {
+    "verdict": "safe"
+  }
+}

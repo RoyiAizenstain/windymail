@@ -20,7 +20,7 @@ t('request clipped to backend limits', () => { const q = ctx.buildAnalyzeRequest
 t('request has exactly schema fields', () => assert.deepEqual(Object.keys(ctx.buildAnalyzeRequest(mkMsg())).sort(), ['attachments','auth_results','body_html','body_text','from','message_id','reply_to','subject','truncated']));
 t('request carries auth results and bodies', () => { const q = ctx.buildAnalyzeRequest(mkMsg({auth:'mx.google.com; spf=pass', text:'hi', html:'<p>hi</p>'})); assert.equal(q.auth_results,'mx.google.com; spf=pass'); assert.equal(q.body_text,'hi'); assert.equal(q.body_html,'<p>hi</p>'); assert.equal(q.truncated,false); });
 t('empty message maps to nulls', () => { const q = ctx.buildAnalyzeRequest(mkMsg()); assert.equal(q.auth_results,null); assert.equal(q.body_html,null); assert.equal(q.body_text,''); });
-t('attachments are metadata only', () => { const q = ctx.buildAnalyzeRequest(mkMsg({atts:[att('x'.repeat(600)+'.exe','application/octet-stream',10)]})); assert.deepEqual(Object.keys(q.attachments[0]).sort(), ['filename','mime_type','size_bytes']); assert.equal(q.attachments[0].filename.length,512); });
+t('attachments are metadata and facts only', () => { const q = ctx.buildAnalyzeRequest(mkMsg({atts:[att('x'.repeat(600)+'.exe','application/octet-stream',10)]})); assert.deepEqual(Object.keys(q.attachments[0]).sort(), ['filename','inspection','mime_type','size_bytes']); assert.equal(q.attachments[0].filename.length,512); assert.deepEqual({...q.attachments[0].inspection}, {inspected:false}); });
 t('attachments capped at 50', () => assert.equal(ctx.buildAnalyzeRequest(mkMsg({atts:Array(60).fill(att('a.pdf','application/pdf',1))})).attachments.length, 50));
 t('field limit sets truncated', () => { const q = ctx.buildAnalyzeRequest(mkMsg({text:'t'.repeat(100001)})); assert.equal(q.body_text.length,100000); assert.equal(q.truncated,true); });
 t('html trimmed first to fit budget', () => { const q = ctx.buildAnalyzeRequest(mkMsg({text:'t'.repeat(90000), html:'h'.repeat(150000)})); assert.ok(bytes(q) <= 190000); assert.equal(q.body_text.length,90000); assert.ok(q.body_html.length < 150000); assert.equal(q.truncated,true); });
@@ -63,4 +63,41 @@ t('report footer: blue button that calls onReport', () => {
   assert.ok(!log.some(([k]) => k === 'newColumns'));
   delete ctx.CardService; });
 t('technical details and points are not kept', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', severity:'high', details:'Extension: .exe', points:35}]}); assert.equal(r.reasons[0].details, undefined); assert.equal(r.reasons[0].points, undefined); });
+// Attachment inspection (ADR-021): byte samples built here, no real files needed.
+const bytesOf = (s) => Array.from(Buffer.from(s, 'latin1')).map(b => b > 127 ? b - 256 : b); // signed, like Apps Script
+const le16 = (n) => [n & 255, (n >> 8) & 255]; const le32 = (n) => [...le16(n & 0xffff), ...le16(n >>> 16)];
+const mkZip = (entries) => { const local = [0x50,0x4b,0x03,0x04, ...Array(26).fill(0)]; const dir = [];
+  for (const e of entries) { const name = Array.from(Buffer.from(e.name, 'latin1')); dir.push(0x50,0x4b,0x01,0x02, 0,0, 0,0, ...le16(e.flags || 0), ...Array(18).fill(0), ...le16(name.length), 0,0, 0,0, ...Array(12).fill(0), ...name); }
+  const end = [0x50,0x4b,0x05,0x06, 0,0, 0,0, ...le16(entries.length), ...le16(entries.length), ...le32(dir.length), ...le32(local.length), 0,0];
+  return [...local, ...dir, ...end].map(b => b > 127 ? b - 256 : b); };
+const budget = () => ({ entries: 50 });
+const fileAtt = (name, bytes, size) => ({ getName: () => name, getContentType: () => 'application/octet-stream', getSize: () => size ?? bytes.length, getBytes: () => bytes });
+t('kind: program, zip, pdf, ole, html, unknown', () => {
+  assert.equal(ctx.fileKind(bytesOf('MZ\x90\x00rest')), 'exe'); assert.equal(ctx.fileKind(bytesOf('\x7fELF')), 'exe');
+  assert.equal(ctx.fileKind(mkZip([])), 'zip'); assert.equal(ctx.fileKind(bytesOf('%PDF-1.7\n')), 'pdf');
+  assert.equal(ctx.fileKind(bytesOf('junk junk %PDF-1.4')), 'pdf');
+  assert.equal(ctx.fileKind([0xd0,0xcf,0x11,0xe0,0xa1].map(b => b - 256)), 'ole');
+  assert.equal(ctx.fileKind(bytesOf('\xef\xbb\xbf  <!DOCTYPE html><html>')), 'html'); assert.equal(ctx.fileKind(bytesOf('<svg xmlns="x">')), 'html');
+  assert.equal(ctx.fileKind(bytesOf('Dear customer, <b>pay</b>')), 'unknown'); assert.equal(ctx.fileKind([]), 'unknown'); });
+t('zip directory: names, folders skipped, nothing unpacked', () => { const d = ctx.readZipDirectory(mkZip([{name:'docs/'},{name:'docs/invoice.pdf.exe'},{name:'a.jpg'}]), budget());
+  assert.deepEqual(Array.from(d.entries), ['docs/invoice.pdf.exe','a.jpg']); assert.equal(d.encrypted, false); assert.equal(d.macros, false); });
+t('zip directory: encrypted flag', () => assert.equal(ctx.readZipDirectory(mkZip([{name:'a.exe', flags:1}]), budget()).encrypted, true));
+t('zip directory: macros in an Office file', () => { assert.equal(ctx.readZipDirectory(mkZip([{name:'[Content_Types].xml'},{name:'word/vbaProject.bin'}]), budget()).macros, true);
+  assert.equal(ctx.readZipDirectory(mkZip([{name:'word/document.xml'}]), budget()).macros, false); });
+t('zip directory: entry budget shared across files', () => { const b = { entries: 3 }; ctx.readZipDirectory(mkZip(Array.from({length:5}, (_, i) => ({name:`f${i}.txt`}))), b);
+  assert.equal(b.entries, 0); assert.equal(ctx.readZipDirectory(mkZip([{name:'x.exe'}]), b).entries.length, 0); });
+t('zip directory: long names clipped', () => assert.equal(ctx.readZipDirectory(mkZip([{name:'a'.repeat(400)}]), budget()).entries[0].length, 200));
+t('zip without a table of contents is not readable', () => { assert.equal(ctx.readZipDirectory(bytesOf('PK\x03\x04garbage'), budget()), null);
+  assert.deepEqual({...ctx.inspectBytes(bytesOf('PK\x03\x04garbage'), budget())}, {inspected:false}); });
+t('truncated zip directory stops safely', () => { const z = mkZip([{name:'a.txt'},{name:'b.txt'}]); const end = z.slice(-22); const cut = [...z.slice(0, 40), ...end];
+  assert.doesNotThrow(() => ctx.readZipDirectory(cut, budget())); });
+t('pdf actions', () => { assert.deepEqual(Array.from(ctx.pdfActions(bytesOf('%PDF-1.7 /OpenAction 5 0 R /JS (app.alert(1)) /Launch /EmbeddedFile'))), ['javascript','open_action','launch','embedded_file']);
+  assert.deepEqual(Array.from(ctx.pdfActions(bytesOf('%PDF-1.7 /Type /Catalog /JSON'))), []); });
+t('inspectAll: facts per file, never bytes', () => { const r = ctx.inspectAll([fileAtt('invoice.pdf', bytesOf('MZ\x90\x00'))]);
+  assert.deepEqual({...r[0]}, {inspected:true, kind:'exe', encrypted:false, entries:[], macros:false, pdf_actions:[]}); assert.ok(!JSON.stringify(r).includes('MZ')); });
+t('inspectAll budgets: size, count, errors', () => { const ok = fileAtt('a.pdf', bytesOf('%PDF-1.4'));
+  const r = ctx.inspectAll([fileAtt('big.pdf', bytesOf('%PDF'), 20 * 1024 * 1024), ok, ok, ok, ok, ok, { getSize: () => 1, getBytes: () => { throw new Error('boom'); } }]);
+  assert.equal(r[0].inspected, false); assert.equal(r[1].inspected, true); assert.equal(r[5].inspected, false); assert.equal(r[6].inspected, false); });
+t('inspection travels in the request', () => { const q = ctx.buildAnalyzeRequest(mkMsg({atts:[fileAtt('photos.zip', mkZip([{name:'run.lnk'}]))]}));
+  assert.deepEqual(Array.from(q.attachments[0].inspection.entries), ['run.lnk']); assert.equal(q.attachments[0].inspection.kind, 'zip'); });
 console.log('addon logic checks passed: ' + n);

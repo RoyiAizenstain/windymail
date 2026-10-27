@@ -487,15 +487,15 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 ---
 
 ## Layer 8: Attachment inspection
-**Status:** Planned (27.10), not started. Decisions open (Step 1). Optional before the deadline: everything up to Layer 7 is live and stable, and this touches both add-on and backend.
-**Stories:** US-03 · **ADRs:** 021 (proposed), 013, 017 · **Threats:** T13
+**Status:** Built (27.10): checks 1-5, kept simple. Backend 532 tests (corpus 18/18), add-on checks 65, inspector run on real files made by a zip tool. Live Gmail check pending.
+**Stories:** US-03 · **ADRs:** 021, 013, 017 · **Threats:** T13
 
 Today only an attachment's name, type and size are checked; its contents never leave Gmail (ADR-013). This layer adds structural facts about each file, read by the add-on, without sending the file.
 
 **Step 1: Decisions** (recommendation first)
-- [ ] **Decision:** scope. Recommended: checks 1-4 below; check 5 (PDF) only if time allows
-- [ ] **Decision:** where to parse. Recommended: in the add-on, sending facts only (keeps "contents never leave Gmail" and the 200 KB request cap). Alternative: send the first bytes of each file to the backend (simpler, but some file content leaves Gmail)
-- [ ] **Decision:** a kill switch, `ATTACHMENT_INSPECTION=false`, so it can be turned off on Render without a deploy. Recommended: yes
+- [x] **Decision:** scope: all five checks, simplest form ("do all simple", 27.10)
+- [x] **Decision:** parse in the add-on, send facts only; read a zip's table of contents, never decompress
+- [x] **Decision:** kill switch `ATTACHMENT_INSPECTION` (default on)
 
 **The checks**
 
@@ -508,21 +508,21 @@ Today only an attachment's name, type and size are checked; its contents never l
 | 5 | Active PDF (optional) | Yes/no for `/JavaScript`, `/OpenAction`, `/Launch`, `/EmbeddedFile` in the first 1 MB | PDFs that run code or drop files | Medium; `/Launch` high |
 
 **Step 2: Backend schema and rules**
-- [ ] `Attachment` gains optional `inspection` fields (type label, encrypted, entry names, macros, PDF flags), strict and capped; unknown values rejected
-- [ ] Rules and fixed wording in `messages.py`; inner names checked by the existing attachment rules; mismatch added to the decisive list (ADR-010)
-- [ ] Kill switch in `config.py`
-- Check: unit tests per rule; corpus gains at least three emails (disguised program, encrypted zip, macro .docx); `test_corpus.py` stays green
+- [x] `Attachment` gains optional `inspection` fields (type label, encrypted, entry names, macros, PDF flags), strict and capped; unknown values rejected
+- [x] Rules and fixed wording in `messages.py`; inner names checked by the existing attachment rules; mismatch added to the decisive list (ADR-010)
+- [x] Kill switch in `config.py`
+- Check: `test_inspection.py` (every rule, kill switch, 422 on bad facts or bytes, entry names never echoed); corpus gains a disguised program (Malicious, 70) and ordinary Office files (Safe, 0): 18/18
 
 **Step 3: Add-on inspection**
-- [ ] Budgets: attachments under 10 MB, at most 5 inspected, 50 archive entries, one archive level (no zip in a zip), a time limit for the whole step
-- [ ] Type label from the first bytes; zip directory read for names, encrypted flag and `vbaProject.bin`
-- [ ] Any failure or budget hit: the attachment is marked "not inspected", never treated as clean
-- Check: Node tests on byte samples (real zip, encrypted zip, OOXML with macros, MZ header, truncated and malformed files)
+- [x] Budgets: attachments under 10 MB, at most 5 inspected, 50 archive entries, one archive level (no zip in a zip), a time limit for the whole step
+- [x] Type label from the first bytes; zip directory read for names, encrypted flag and `vbaProject.bin`
+- [x] Any failure or budget hit: the attachment is marked "not inspected", never treated as clean
+- Check: Node tests on byte samples (zip, encrypted zip, OOXML with macros, MZ and ELF headers, HTML, PDF actions, truncated and malformed zips, budgets); run on real files from a zip tool, including a zip with a comment
 
 **Step 4: Card and docs**
-- [ ] "Couldn't check inside an attachment" as a low reason when inspection fails, so it is never a silent gap
-- [ ] README (Signals, LLM safety: inner names never go to the AI), threat model T13, ADR-021 accepted
-- Check: Gmail test with real attachments sent to the demo inbox
+- [x] "Couldn't check inside an attachment" as a low reason when inspection fails, so it is never a silent gap
+- [x] README (Signals, LLM safety: inner names never go to the AI), threat model T13, ADR-021 accepted
+- [ ] Check: Gmail test with real attachments sent to the demo inbox
 
 **Done when:** a disguised program, an encrypted zip and a macro document each get the right reason in Gmail; a malformed or huge attachment never breaks the card; tests and corpus pass.
 

@@ -199,6 +199,56 @@ CATALOG: dict[str, Message] = {
         text_many="{count} attachments are compressed archives, which can hide what's inside.",
         details="Extension",
     ),
+    # Attachments: what the add-on saw inside the file (ADR-021)
+    "attachment_type_mismatch": Message(
+        category="attachment",
+        severity="high",
+        text="An attachment is not the kind of file its name says. "
+        "It is disguised as something safe.",
+        text_many="{count} attachments are not the kind of file their names say. "
+        "They are disguised as something safe.",
+        details="Name's extension, then the real type from the file's first bytes",
+    ),
+    "attachment_encrypted_archive": Message(
+        category="attachment",
+        severity="medium",
+        text="An attachment is a password-protected archive, so security checks can't see "
+        "inside. Scammers use this to slip harmful files through.",
+        text_many="{count} attachments are password-protected archives, so security checks "
+        "can't see inside. Scammers use this to slip harmful files through.",
+        details="Zip table of contents: entries marked encrypted",
+    ),
+    "attachment_archive_risky_file": Message(
+        category="attachment",
+        severity="high",
+        text="An archive attachment hides a risky file inside, such as a program.",
+        text_many="{count} archive attachments hide risky files inside, such as programs.",
+        details="Extensions of risky files listed in the zip's table of contents",
+    ),
+    "attachment_hidden_macros": Message(
+        category="attachment",
+        severity="high",
+        text="An Office attachment contains macros, though its name doesn't show it. "
+        "Macros can run code on your computer.",
+        text_many="{count} Office attachments contain macros, though their names don't show "
+        "it. Macros can run code on your computer.",
+        details="Macro project (vbaProject.bin) inside a file named",
+    ),
+    "attachment_pdf_active": Message(
+        category="attachment",
+        severity="medium",
+        text="A PDF attachment is set up to run actions when opened, such as scripts or files.",
+        text_many="{count} PDF attachments are set up to run actions when opened, "
+        "such as scripts or files.",
+        details="PDF actions",
+    ),
+    "attachment_not_inspected": Message(
+        category="attachment",
+        severity="low",
+        text="WindyMail couldn't check inside an attachment, so treat it with care.",
+        text_many="WindyMail couldn't check inside {count} attachments, so treat them with care.",
+        details="Not inspected: too large, too many attachments, or unreadable",
+    ),
     # Content
     "hidden_link": Message(
         category="content",

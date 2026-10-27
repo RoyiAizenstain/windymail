@@ -61,6 +61,8 @@ class Settings:
     llm_model: str = "claude-haiku-5-5"
     # Per-user requests per minute (ADR-011); also caps LLM spend per user.
     rate_limit_per_minute: int = 20
+    # Score the add-on's attachment facts (ADR-021); off ignores them without a deploy.
+    attachment_inspection: bool = True
 
     @property
     def mode(self) -> Mode:
@@ -78,4 +80,5 @@ def get_settings() -> Settings:
         llm_enabled=_env_bool("LLM_ENABLED", default=True),
         llm_model=_env_str("LLM_MODEL") or "claude-haiku-5-5",
         rate_limit_per_minute=_env_positive_int("RATE_LIMIT_PER_MINUTE", default=20),
+        attachment_inspection=_env_bool("ATTACHMENT_INSPECTION", default=True),
     )

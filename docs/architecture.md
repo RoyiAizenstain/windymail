@@ -69,11 +69,16 @@ Request:
   "body_text": "string",
   "body_html": "string | null",
   "attachments": [
-    { "filename": "string", "mime_type": "string", "size_bytes": 0 }
+    { "filename": "string", "mime_type": "string", "size_bytes": 0,
+      "inspection": { "inspected": true, "kind": "exe | zip | pdf | ole | html | unknown",
+                      "encrypted": false, "entries": ["string"], "macros": false,
+                      "pdf_actions": ["javascript | open_action | launch | embedded_file"] } }
   ],
   "truncated": false
 }
 ```
+
+`inspection` (optional, ADR-021): facts the add-on read from the file, never its bytes. `inspected: false` means it wasn't looked inside (over budget or unreadable). `entries` are names from a zip's table of contents, at most 50 per request and 255 characters each; never echoed, logged or sent to the LLM.
 
 Limits (ADR-011): body truncated by the add-on before sending (HTML first, then plain text, to fit 190 KB; `truncated: true` when anything was cut); backend rejects requests over 200 KB (413, checked before the body is read), unknown fields and over-long fields (422). Over the per-user rate limit (default 20 per minute) the answer is 429 with `Retry-After`. Error responses never echo the submitted values (ADR-011).
 
