@@ -4,7 +4,7 @@ A Gmail Add-on that analyzes an opened email and shows a maliciousness score (0-
 
 Built as a home assignment for the Upwind Security Analyst role. The brief: build a Gmail Add-on, backed by a backend service, that analyzes an opened email and presents a maliciousness score with a verdict and the reasoning behind it, treating emails, attachments, and external responses as untrusted input. The scope and signals were left open. The design priority is security first, product second: a smaller feature set that is secure, explainable, and stable in a live demo.
 
-> **Status:** feature-complete and deployed. The add-on runs in Gmail against the live backend on Render: deterministic signals, a look inside attachments without sending them, a bounded AI check, a transparent score, backend hardening, one-click reporting to a (mock) security team, and the final card design. Remaining: demo material. Progress: [docs/development-layers.md](docs/development-layers.md).
+> **Status:** feature-complete and deployed. The add-on runs in Gmail against the live backend on Render: deterministic signals, a look inside attachments without sending them, a bounded AI check, a transparent score, backend hardening, one-click reporting to a (mock) security team, and the final card design. Progress: [docs/development-layers.md](docs/development-layers.md).
 
 ---
 
