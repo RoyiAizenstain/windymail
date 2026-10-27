@@ -292,12 +292,12 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 ---
 
 ## Layer 4: Backend Security (basic)
-**Status:** Not started
+**Status:** In progress (27.10). Steps 1-2 done (decisions in ADR-011; 413 size cap); Step 3 (rate limiting) next.
 **Stories:** US-11 · **ADRs:** 011
 
 - [ ] Google ID token verification on `/analyze` and `/report` (`/analyze` done in Layer 1, Step 7; confirm `/report` is covered when it is built)
 - [ ] Hashed user ID; per-user rate limiting
-- [ ] Payload size limits and strict schema (strict schema and per-field limits done in Layer 1, 422; whole-request 200 KB cap with 413 still to build)
+- [x] Payload size limits and strict schema (strict schema and per-field limits, Layer 1, 422; whole-request 200 KB cap, 413, Layer 4 Step 2)
 - [x] Timeouts on outbound calls (LLM: 5 s per attempt, 1 retry, Layer 3; the SOC webhook gets one when `/report` is built)
 - [x] Masking before LLM call (Layer 3: links, emails, phone numbers, long numbers; only subject and plain body sent)
 - [ ] Logging hygiene (incl. replacing uvicorn's default access log, which records client IPs, with ADR-011 fields only; the app logger is configured and logs the LLM outcome, model and latency only, Layer 3)
@@ -305,6 +305,54 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 - [ ] README: security section and threat model
 
 **Done when:** unauthenticated and oversized requests are rejected; tests pass.
+
+### Layer 4 step-by-step plan
+Same rules as before: one step at a time, each ends with its own check. **You** marks actions only the account owner can do. **Decision** marks a choice to confirm before the step starts.
+
+Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Google's certificates can't be fetched); strict schema with per-field limits (422); docs off by default; LLM timeout and masking; app logs without content.
+
+**Step 1: Decisions before code**
+- [x] **Decision:** whole-request cap 200 KB → 413, checked before the body is parsed, from `Content-Length` and while reading the body (a request without `Content-Length`, or lying about it, is cut off at the limit too)
+- [x] **Decision:** rate limit per user, fixed window, 20 requests per minute (ADR-011), configurable (`RATE_LIMIT_PER_MINUTE`); over the limit → 429 with `Retry-After`; checked right after the token, before any analysis or LLM call, so it also caps LLM spend per user
+- [x] **Decision:** user ID hashed as `sha256(salt + sub)` with a random salt generated at startup and never stored or logged; enough for rate limiting and log correlation within one instance; no salt secret to manage (Herd Immunity, if built, would need a persistent salt)
+- [x] **Decision:** error responses never echo input: 422 returns the field location and error type only (FastAPI's default includes the submitted value, which can be email content); 500 returns a generic message
+- [x] **Decision:** uvicorn's access log (client IP, full path) replaced by one line per request: request ID, method, path, status, latency, hashed user ID when known; done in code, so no Render start-command change
+- Check: recorded in ADR-011 (Status note: implementation details).
+
+**Step 2: Request size limit (413)**
+- [x] ASGI middleware (`app/security.py`, `BodySizeLimit`): rejects by `Content-Length` over the cap, and counts bytes while reading so chunked or understated bodies are stopped too; an invalid `Content-Length` is 400. Raises an `HTTPException` while reading, since FastAPI turns any other error during body parsing into a generic 400
+- [x] Tests: just under the cap passes, over the cap 413 (with and without `Content-Length`, and with a false `Content-Length`); 413 response carries no body content; rejected before the token is checked (no certificate fetch); invalid `Content-Length` 400; `/health` unaffected (11 new, 408 total)
+- Check: tests pass.
+
+**Step 3: Hashed user ID and rate limiting (429)**
+- [ ] `app/security.py`: `hash_user(sub)`; fixed-window counter in memory, per hashed user, with a lock (thread pool), stale windows dropped so memory stays bounded
+- [ ] Dependency after `require_user` on `/analyze` (and `/report` when built)
+- [ ] Tests: the 21st request in a minute is 429 with `Retry-After`; another user is unaffected; the window resets; a rejected request never reaches the analysis or the LLM; hashes differ from the raw `sub` and are stable within the process
+- Check: tests pass.
+
+**Step 4: Errors that don't echo input**
+- [ ] Handler for validation errors: `{"detail": [{"loc": [...], "type": "..."}]}`, no `input`, no `msg` built from the value
+- [ ] Generic 500 handler: logs the error type and request ID only
+- [ ] Tests: unknown field, over-long field and wrong type return 422 without the submitted value; a crash returns 500 with no stack trace or content
+- Check: tests pass.
+
+**Step 5: Request logging**
+- [ ] Middleware: request ID (random), method, path, status, latency in ms, hashed user ID when authenticated; `X-Request-ID` response header so a user-visible error can be matched to a log line
+- [ ] uvicorn access logger disabled in code
+- [ ] Tests: a request produces exactly one access line with those fields; no client IP, no query string, no token, no body content in any log line (including the LLM line and errors)
+- Check: tests pass.
+
+**Step 6: Deploy and live check**
+- [ ] Deploy (backend only; no add-on change)
+- [ ] Live: Render logs show the new access line and no client IPs; an oversized request gets 413; repeated requests get 429 (with a low test limit set temporarily in Render, then restored)
+- [ ] The add-on shows its plain "couldn't check" card for 413 and 429 (already true for any non-200)
+- Check: normal Gmail use unaffected.
+
+**Step 7: Close the layer**
+- [ ] README: Security section (authentication, limits, rate limiting, error and log hygiene, secrets, what is not covered)
+- [ ] threat-model.md: T4, T5, T6 mitigations updated; Known Limitations: in-memory, single-instance rate limit; salt resets on restart
+- [ ] architecture.md: 413 and 429 marked as built
+- [ ] Tick the boxes above, set Layer 4 status to Done
 
 ---
 

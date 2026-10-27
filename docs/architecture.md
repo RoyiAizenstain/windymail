@@ -75,7 +75,7 @@ Request:
 }
 ```
 
-Limits (ADR-011): body truncated by the add-on before sending (HTML first, then plain text, to fit 190 KB; `truncated: true` when anything was cut); backend rejects unknown fields and over-long fields (422). A whole-request cap of 200 KB (413) and per-user rate limiting (429) are planned in Layer 4 and not yet built.
+Limits (ADR-011): body truncated by the add-on before sending (HTML first, then plain text, to fit 190 KB; `truncated: true` when anything was cut); backend rejects requests over 200 KB (413, checked before the body is read), unknown fields and over-long fields (422). Per-user rate limiting (429) is planned in Layer 4 and not yet built.
 
 Response:
 ```json

@@ -51,6 +51,6 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 
 ## Open items
 * **Status (27.10):** Layers 1-3 done (skeleton, rule engine, bounded LLM); Layer 4 (backend security) next. Live A/B prompt-injection email test from Layer 3 not yet reported.
-* **Not built yet (Layer 4):** whole-request 200 KB cap (413), per-user rate limiting (429), replacing uvicorn's access log (it records client IPs).
+* **Not built yet (Layer 4):** per-user rate limiting (429), errors that don't echo input (FastAPI's 422 echoes the submitted value), replacing uvicorn's access log (it records client IPs). The 200 KB cap (413) is built (`app/security.py`).
 * **Scoring (ADR-010):** provisional model live (high 35 / medium 15 / low 5 per reason, LLM +20 cap); final weights still open.
 * Hosting decided: Render free tier with keep-warm ping (ADR-012).

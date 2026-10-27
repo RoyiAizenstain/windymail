@@ -73,6 +73,12 @@ Related: [Development Layers](development-layers.md) · [User Stories](user-stor
 * **Logging:** log request ID, hashed user ID, score, latency, and errors only. Never bodies, subjects, tokens, or LLM prompts.
 * **Secrets:** environment variables only; `.env.example` committed; `.env` gitignored; repo scanned for secrets before publishing.
 **Consequences:** No shared secret to leak; every request is tied to a verified user. Requires correct OAuth client configuration in the Apps Script project, to be verified early in Layer 1. Rate limiting does not survive restarts or scale across instances.
+**Implementation details (Layer 4, accepted 27.10):**
+* **Request size:** whole request capped at 200 KB → 413, checked from `Content-Length` before the body is read and again while reading, so a request without `Content-Length` or with a false one is stopped at the limit too.
+* **Rate limit:** fixed window, 20 requests per minute per user by default (`RATE_LIMIT_PER_MINUTE`), → 429 with `Retry-After`; checked right after the token and before any analysis, so it also caps LLM spend per user.
+* **Hashed user ID:** `sha256(salt + sub)` with a random salt generated at startup, never stored or logged. Enough for rate limiting and log correlation within one instance, with no salt secret to manage; counters and hashes reset on restart. Herd Immunity, if built, needs a persistent salt from the environment.
+* **Errors:** a 422 returns the field location and error type only, never the submitted value (FastAPI's default echoes it, and it can be email content); a 500 returns a generic message.
+* **Request log:** uvicorn's access log (client IP, full path) is replaced in code by one line per request: request ID, method, path, status, latency, hashed user ID when known; the request ID is returned as `X-Request-ID`.
 
 ## ADR-012: Hosting on Render free tier with keep-warm
 **Status:** Accepted

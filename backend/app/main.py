@@ -14,6 +14,7 @@ from app.analysis import analyze as analyze_email
 from app.auth import require_user
 from app.config import get_settings
 from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse
+from app.security import BodySizeLimit
 
 
 def _configure_logging() -> None:
@@ -37,6 +38,8 @@ def create_app() -> FastAPI:
         redoc_url=None,
         openapi_url="/openapi.json" if docs_enabled else None,
     )
+    # Whole-request size cap before anything reads the body (ADR-011).
+    app.add_middleware(BodySizeLimit)
 
     @app.api_route("/health", methods=["GET", "HEAD"])
     def health() -> HealthResponse:
