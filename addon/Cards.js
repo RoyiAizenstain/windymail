@@ -42,6 +42,13 @@ var AI_INJECTION_WORDS = 'Tries to give instructions to automated checks';
 
 var PARTIAL_LINE = "🌫️ Limited visibility: some checks couldn't run. Verdict based on technical signals only.";
 
+/** Personal mode has no security team: Gmail's own report is the next step (US-13). */
+var PERSONAL_REPORT_LINES = [
+  "Don't click links, open attachments, or reply.",
+  'To report it, open the <b>⋮</b> menu at the top right of the email and choose ' +
+    '<b>Report phishing</b>. This helps Gmail protect you and others.',
+];
+
 function buildHomepageCard() {
   var section = CardService.newCardSection().addWidget(
     CardService.newTextParagraph().setText('Open an email to check whether it is safe.')
@@ -84,6 +91,7 @@ function buildResultCard(message, result) {
 
   var card = newCard('Email check').addSection(verdict).addSection(reasons);
   if (aiSection) card.addSection(aiSection);
+  card.addSection(buildReportSection(message, result));
   card.addSection(email);
   if (result.reasons.length > 0) card.addSection(buildDetailsSection(result.reasons));
   return card.build();
@@ -123,6 +131,70 @@ function buildAiSection(ai) {
     section.addWidget(CardService.newTextParagraph().setText(toPlainText(line)));
   });
   return section;
+}
+
+/**
+ * Organization mode: one-click report to the security team (US-06, ADR-008).
+ * Personal mode: there is no security team, so point to Gmail's own "Report
+ * phishing" instead (US-13, ADR-015). Shown for every verdict: the user may
+ * spot something the checks missed.
+ */
+function buildReportSection(message, result) {
+  var section = CardService.newCardSection().setHeader('Think this email is a scam?');
+  if (result.mode !== 'organization') {
+    PERSONAL_REPORT_LINES.forEach(function (line) {
+      section.addWidget(CardService.newTextParagraph().setText(line));
+    });
+    return section;
+  }
+
+  var report = CardService.newTextButton()
+    .setText('Report to Security Team')
+    .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
+    .setOnClickAction(
+      CardService.newAction()
+        .setFunctionName('onReport')
+        .setParameters(reportParameters(message.getId(), result))
+    );
+  return section
+    .addWidget(
+      CardService.newTextParagraph().setText(
+        'Let your security team know. They get the risk score and what WindyMail found, ' +
+          'not the content of the email.'
+      )
+    )
+    .addWidget(CardService.newButtonSet().addButton(report));
+}
+
+/** Action parameters must be strings; the reason IDs travel as one comma-joined value. */
+function reportParameters(messageId, result) {
+  return {
+    messageId: String(messageId),
+    score: String(result.score),
+    reasonIds: result.reasons
+      .map(function (reason) {
+        return reason.id;
+      })
+      .filter(Boolean)
+      .join(','),
+  };
+}
+
+/** Shown after a report is delivered (US-06: confirmation after reporting). */
+function buildReportedCard() {
+  var section = CardService.newCardSection()
+    .addWidget(
+      CardService.newDecoratedText()
+        .setTopLabel('✅ Report sent')
+        .setText('<b>Thanks. Your security team has been told.</b>')
+        .setWrapText(true)
+    )
+    .addWidget(
+      CardService.newTextParagraph().setText(
+        "Until they get back to you, don't click links, open attachments, or reply to this email."
+      )
+    );
+  return newCard('Reported').addSection(section).build();
 }
 
 /** Collapsed analyst view (US-10): what each check found, in technical terms. */

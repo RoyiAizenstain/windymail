@@ -13,7 +13,14 @@ from fastapi.exceptions import RequestValidationError
 
 from app.analysis import analyze as analyze_email
 from app.config import get_settings
-from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse
+from app.models import (
+    AnalyzeRequest,
+    AnalyzeResponse,
+    HealthResponse,
+    ReportRequest,
+    ReportResponse,
+)
+from app.report import send_report
 from app.security import (
     AccessLog,
     BodySizeLimit,
@@ -68,6 +75,13 @@ def create_app() -> FastAPI:
         request: AnalyzeRequest, user_hash: Annotated[str, Depends(rate_limited_user)]
     ) -> AnalyzeResponse:
         return analyze_email(request)
+
+    @app.post("/api/v1/report")
+    def report(
+        request: ReportRequest, user_hash: Annotated[str, Depends(rate_limited_user)]
+    ) -> ReportResponse:
+        send_report(request, user_hash)
+        return ReportResponse(status="received")
 
     return app
 

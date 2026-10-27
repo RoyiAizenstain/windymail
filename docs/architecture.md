@@ -117,7 +117,10 @@ Request:
 ```
 Response: `{ "status": "received" }`
 
-No email body is sent in reports (ADR-008).
+* `message_id` is Gmail's ID (letters, digits, `-`, `_`); `score` a whole number 0-100 (strict); `reason_ids` at most 50, each one an ID from the reason catalog, else 422.
+* Organization mode only: in personal mode the endpoint answers 404. Same token check and per-user rate limit as `/analyze`.
+* The backend posts to `SOC_WEBHOOK_URL` (https only, 5 s timeout, no redirects): `event`, `source`, `reported_at`, `reporter` (salted user hash), `message_id`, `score`, `verdict` (derived from the score by the backend), `reason_ids`. A webhook failure, timeout or non-2xx answer → 502, so the add-on never shows a false confirmation.
+* No email body, subject or sender is sent in reports (ADR-008). The score is the user's claim, copied from the `/analyze` result by the add-on.
 
 ### `GET /health`
 Unauthenticated keep-warm endpoint (ADR-012). Response: `{ "status": "ok" }`. Returns no version, config, or other data.

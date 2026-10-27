@@ -53,6 +53,7 @@ Related: [Development Layers](development-layers.md) · [User Stories](user-stor
 **Context:** No real Upwind SOC endpoint exists.
 **Decision:** The Report button sends to a webhook URL from environment (`SOC_WEBHOOK_URL`), pointing to a mock receiver. Reports carry score, reason IDs, and message identifier, not the email body. Automatic escalation (proposed threshold: score >= 85, above the Red boundary to limit false-positive alerts) is future work.
 **Consequences:** Less data exposure. Escalation depends on the user pressing Report.
+**Implementation (Layer 6, 27.10):** `POST /api/v1/report` (`app/report.py`) forwards identifiers only (Gmail message ID, score, verdict derived by the backend, catalog reason IDs, salted reporter hash) over https with a 5 s timeout and no redirects; 404 in personal mode; 502 when the webhook doesn't confirm, so the add-on never shows a false "sent". The demo receiver is webhook.site, which only ever sees those identifiers. The reporter hash uses the startup salt, so it groups reports from one user within one instance only; a real deployment would send the reporter's address to the SOC, a privacy trade-off left to the organization.
 
 ## ADR-009: Herd Immunity as a privacy-preserving proof of concept
 **Status:** Accepted as stretch goal (ADR-013). Built only if time allows.

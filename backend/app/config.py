@@ -42,6 +42,14 @@ def _env_required(name: str) -> str:
     return value
 
 
+def _env_https_url(name: str) -> str | None:
+    value = _env_str(name)
+    if value is not None and not value.lower().startswith("https://"):
+        # Reports leave the backend; never send them in clear text.
+        raise ValueError(f"{name} must be an https:// URL")
+    return value
+
+
 @dataclass(frozen=True)
 class Settings:
     google_client_id: str
@@ -64,7 +72,7 @@ class Settings:
 def get_settings() -> Settings:
     return Settings(
         google_client_id=_env_required("GOOGLE_CLIENT_ID"),
-        soc_webhook_url=_env_str("SOC_WEBHOOK_URL"),
+        soc_webhook_url=_env_https_url("SOC_WEBHOOK_URL"),
         enable_api_docs=_env_bool("ENABLE_API_DOCS", default=False),
         anthropic_api_key=_env_str("ANTHROPIC_API_KEY"),
         llm_enabled=_env_bool("LLM_ENABLED", default=True),

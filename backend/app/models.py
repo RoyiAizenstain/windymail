@@ -6,7 +6,7 @@ string and list has an upper bound.
 
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.config import Mode
 
@@ -74,6 +74,28 @@ class AnalyzeResponse(StrictModel):
     herd: Herd | None = None
     partial: bool = False
     mode: Mode
+
+
+class ReportRequest(StrictModel):
+    """A user's manual report (ADR-008): identifiers and the score only, never content."""
+
+    message_id: str = Field(min_length=1, max_length=256, pattern=r"^[A-Za-z0-9_-]+$")
+    score: int = Field(ge=0, le=100, strict=True)
+    reason_ids: list[str] = Field(default_factory=list, max_length=50)
+
+    @field_validator("reason_ids")
+    @classmethod
+    def known_reason_ids(cls, ids: list[str]) -> list[str]:
+        # Only IDs this backend can produce reach the SOC; anything else is a 422.
+        from app.signals.messages import CATALOG  # messages imports this module
+
+        if any(reason_id not in CATALOG for reason_id in ids):
+            raise ValueError("unknown reason id")
+        return list(dict.fromkeys(ids))
+
+
+class ReportResponse(StrictModel):
+    status: Literal["received"]
 
 
 class HealthResponse(StrictModel):

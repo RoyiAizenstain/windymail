@@ -410,12 +410,13 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 ---
 
 ## Layer 6: UX & Report
-**Status:** In progress. Verdict card, severity words, technical details and AI check section done in Layers 1-3; Report button and screenshots remain.
+**Status:** In progress. Verdict card, severity words, technical details and AI check section done in Layers 1-3; Report button built (27.10), live check and screenshots remain.
 **Stories:** US-01, US-06, US-10 · **ADRs:** 002, 008
 
 - [x] Traffic light verdict with WindyMail weather labels and plain-language summary (ADR-014); severity words per reason; "🤖 AI check" section (Layer 3)
 - [x] Collapsible technical details (Layer 2, Step 8)
-- [ ] Report to Security Team button (mock webhook) in organization mode; "Report phishing" guidance in personal mode (ADR-015, US-13)
+- [x] Report to Security Team button (mock webhook) in organization mode; "Report phishing" guidance in personal mode (ADR-015, US-13). `/api/v1/report` with 24 backend tests (488 total) (forwarding, identifiers-only payload, 404 personal, 401, 422 on unknown IDs or extra fields, 502 on webhook failure, rate limit, log without URL or IDs); add-on: report section for every verdict, confirmation card, failure notification
+- [ ] **You:** set `SOC_WEBHOOK_URL` on Render to a webhook.site URL, then report one email from Gmail and see it arrive
 - [ ] Screenshots for README
 
 ---

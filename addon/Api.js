@@ -10,6 +10,7 @@ var VERDICTS = ['safe', 'suspicious', 'malicious'];
 var MODES = ['organization', 'personal'];
 var SEVERITIES = ['high', 'medium', 'low'];
 var TACTICS = ['urgency', 'authority', 'credentials', 'financial', 'impersonation'];
+var REASON_ID = /^[a-z0-9_]{1,64}$/;
 
 /** Returns a validated result object, or null on any failure. */
 function analyzeMessage(message) {
@@ -117,6 +118,56 @@ function utf8Length(text) {
   return bytes;
 }
 
+/**
+ * Reports the message to the security team via /api/v1/report (ADR-008).
+ * Identifiers and the score only, never content. Returns true once the backend
+ * confirms the report was delivered.
+ */
+function reportMessage(messageId, score, reasonIds) {
+  var token = ScriptApp.getIdentityToken();
+  if (!token) {
+    console.error('WindyMail: no identity token (openid scope missing?)');
+    return false;
+  }
+
+  var response;
+  try {
+    response = UrlFetchApp.fetch(BACKEND_BASE_URL + '/api/v1/report', {
+      method: 'post',
+      contentType: 'application/json',
+      headers: { Authorization: 'Bearer ' + token },
+      payload: JSON.stringify(buildReportRequest(messageId, score, reasonIds)),
+      muteHttpExceptions: true,
+      followRedirects: false,
+    });
+  } catch (err) {
+    console.error('WindyMail: backend unreachable (report)');
+    return false;
+  }
+
+  var status = response.getResponseCode();
+  if (status !== 200) {
+    console.error('WindyMail: report returned HTTP ' + status);
+    return false;
+  }
+  try {
+    return JSON.parse(response.getContentText()).status === 'received';
+  } catch (err) {
+    console.error('WindyMail: invalid report response');
+    return false;
+  }
+}
+
+function buildReportRequest(messageId, score, reasonIds) {
+  return {
+    message_id: String(messageId),
+    score: score,
+    reason_ids: reasonIds.filter(function (id, i) {
+      return REASON_ID.test(id) && reasonIds.indexOf(id) === i;
+    }),
+  };
+}
+
 /** Keeps only known fields with the expected types; throws on anything else. */
 function parseAnalyzeResponse(raw) {
   if (!raw || typeof raw !== 'object') throw new Error('not an object');
@@ -136,6 +187,8 @@ function parseAnalyzeResponse(raw) {
     })
     .map(function (r) {
       return {
+        // Sent back in a report; only catalog-shaped IDs are kept (the backend checks them again).
+        id: typeof r.id === 'string' && REASON_ID.test(r.id) ? r.id : null,
         text: r.text,
         severity: SEVERITIES.indexOf(r.severity) === -1 ? null : r.severity,
         details: String(r.details || ''),

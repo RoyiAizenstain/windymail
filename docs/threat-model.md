@@ -37,7 +37,7 @@ Related: [Architecture Decisions](architecture-decisions.md) · [Development Lay
 | T8 | Malicious or malformed response from an external service | External service | Validate all external responses before use | ADR-004 |
 | T9 | Secret leakage through the repository | — | Environment variables only, `.env` gitignored, pre-publish scan | ADR-011 |
 | T10 | Herd Immunity store reveals who received what | Insider | Salted hashes of user IDs only, no content, expiry | ADR-009, ADR-011 |
-| T11 | Replay or forged requests to `/report` | Internet attacker | Same token verification as `/analyze` | ADR-011 |
+| T11 | Replay or forged requests to `/report` | Internet attacker / malicious user | Same token verification and per-user rate limit as `/analyze`; strict schema (reason IDs from the catalog only, no free text reaches the SOC); webhook URL from the environment only (https, no redirects), so a request cannot choose where reports go. A signed-in user can still misstate the score: a report is the user's claim, and the SOC triages it as one | ADR-008, ADR-011 |
 
 ## 5. Out of Scope (explicitly not defended)
 * A compromised Google account or compromised Gmail itself.

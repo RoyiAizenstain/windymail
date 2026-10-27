@@ -47,4 +47,9 @@ t('impersonation passes validation', () => assert.deepEqual(Array.from(ctx.parse
 t('points shown in details', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', severity:'high', details:'Extension: .exe', points:35}]}); assert.equal(ctx.detailsLine(r.reasons[0]), '• (+35) Extension: .exe'); });
 t('invalid points dropped', () => { for (const points of [-1, 101, 4.5, '35', null, undefined, '<b>9</b>']) { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', details:'d', points}]}); assert.equal(r.reasons[0].points, null); assert.equal(ctx.detailsLine(r.reasons[0]), '• d'); } });
 t('zero points shown', () => assert.equal(ctx.detailsLine({details:'d', points:0}), '• (+0) d'));
+t('reason id kept when catalog-shaped', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', id:'dmarc_fail'},{text:'b', id:'<b>x</b>'},{text:'c', id:5}]}); assert.deepEqual(r.reasons.map(x => x.id), ['dmarc_fail', null, null]); });
+t('report request has exactly schema fields', () => assert.deepEqual(Object.keys(ctx.buildReportRequest('m1', 80, [])).sort(), ['message_id','reason_ids','score']));
+t('report request filters and dedupes ids', () => assert.deepEqual(Array.from(ctx.buildReportRequest('m1', 80, ['dmarc_fail','','a,b','dmarc_fail','x'.repeat(65),'link_ip']).reason_ids), ['dmarc_fail','link_ip']));
+t('report parameters are strings', () => { const p = ctx.reportParameters(123, {score:82, reasons:[{id:'dmarc_fail'},{id:null},{id:'link_ip'}]}); assert.deepEqual({...p}, {messageId:'123', score:'82', reasonIds:'dmarc_fail,link_ip'}); });
+t('personal report guidance mentions Report phishing', () => assert.ok(ctx.PERSONAL_REPORT_LINES.some(l => l.includes('Report phishing'))));
 console.log('addon logic checks passed: ' + n);
