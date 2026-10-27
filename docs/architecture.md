@@ -22,12 +22,15 @@ Related: [Architecture Decisions](architecture-decisions.md) · [Threat Model](t
 |                                                                  |
 |  [1] Auth & rate limit           Google ID token (ADR-011)       |
 |  [2] Request validation          size limits, strict schema      |
-|  [3] Normalizer                  HTML -> text, extract links,    |
-|                                  detect hidden text              |
-|  [4] Signal engine               deterministic checks            |
-|  [5] LLM analyzer                bounded, schema-validated       |
-|                                  (ADR-003, 004, 005)             |
-|  [6] Scorer                      combines [4] + [5] (ADR-010)    |
+|  [3] Normalizer                  links as a browser reads them,  |
+|                                  redirects unwrapped, HTML text  |
+|  [4] Signal engine (rules)       sender, lookalikes, links,      |
+|                                  attachments, hidden content,    |
+|                                  language EN/HE (ADR-017, 018)   |
+|  [5] LLM analyzer (Haiku)        labels only, schema-validated   |
+|                                  twice (ADR-003, 004, 005, 019)  |
+|  [6] Scorer                      [4] + [5] capped at +20         |
+|                                  (ADR-010)                       |
 |  [7] Herd immunity tracker       stretch goal (ADR-009)          |
 |  [8] SOC notifier                manual reports, mock (ADR-008)  |
 +------------------+-----------------------------+-----------------+
@@ -43,8 +46,8 @@ Related: [Architecture Decisions](architecture-decisions.md) · [Threat Model](t
 ## 2. Request Flow
 1. User opens an email; the add-on trigger fires.
 2. Add-on builds the request (Section 3) and calls `/api/v1/analyze`.
-3. Backend runs steps [1] to [6] (and [7] if the stretch goal is built).
-4. Backend returns the response (Section 4); the add-on renders it.
+3. Backend runs steps [1] to [6] (and [7] if the stretch goal is built). The rules [4] and the LLM [5] look at the email independently; the LLM receives only the masked subject and plain body, and returns labels. If the LLM gives no answer, the rules' result is returned marked `partial` (ADR-005).
+4. Backend returns the response (Section 3); the add-on validates it and renders it, wording the AI labels itself (ADR-019).
 5. User may press **Report**, which calls `/api/v1/report`.
 
 ---
@@ -72,7 +75,7 @@ Request:
 }
 ```
 
-Limits (ADR-011): body truncated by the add-on before sending (HTML first, then plain text, to fit 190 KB; `truncated: true` when anything was cut); backend rejects payloads over 200 KB (413) and unknown fields.
+Limits (ADR-011): body truncated by the add-on before sending (HTML first, then plain text, to fit 190 KB; `truncated: true` when anything was cut); backend rejects unknown fields and over-long fields (422). A whole-request cap of 200 KB (413) and per-user rate limiting (429) are planned in Layer 4 and not yet built.
 
 Response:
 ```json

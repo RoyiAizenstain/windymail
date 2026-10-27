@@ -297,10 +297,10 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 
 - [ ] Google ID token verification on `/analyze` and `/report` (`/analyze` done in Layer 1, Step 7; confirm `/report` is covered when it is built)
 - [ ] Hashed user ID; per-user rate limiting
-- [ ] Payload size limits and strict schema
-- [ ] Timeouts on outbound calls
-- [ ] Masking before LLM call
-- [ ] Logging hygiene (incl. replacing uvicorn's default access log, which records client IPs, with ADR-011 fields only)
+- [ ] Payload size limits and strict schema (strict schema and per-field limits done in Layer 1, 422; whole-request 200 KB cap with 413 still to build)
+- [x] Timeouts on outbound calls (LLM: 5 s per attempt, 1 retry, Layer 3; the SOC webhook gets one when `/report` is built)
+- [x] Masking before LLM call (Layer 3: links, emails, phone numbers, long numbers; only subject and plain body sent)
+- [ ] Logging hygiene (incl. replacing uvicorn's default access log, which records client IPs, with ADR-011 fields only; the app logger is configured and logs the LLM outcome, model and latency only, Layer 3)
 - [ ] Tests: missing/invalid token → 401, oversized → 413, rate limit → 429
 - [ ] README: security section and threat model
 
@@ -309,20 +309,20 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 ---
 
 ## Layer 5: Scoring Model (simple)
-**Status:** Blocked on ADR-010
+**Status:** In progress. Provisional model live: rules by severity (high 35, medium 15, low 5, per reason) plus LLM capped at +20, never subtracting (ADR-010, `app/scoring.py`). Remaining: review weights against the demo emails, close ADR-010, README scoring section
 **Stories:** US-02 · **ADRs:** 003, 010
 
-- [ ] Weighted sum of signals, capped LLM contribution, clamp to 0-100
+- [x] Weighted sum of signals, capped LLM contribution, clamp to 0-100 (provisional, Layers 2-3)
 - [ ] README: scoring section
 
 ---
 
 ## Layer 6: UX & Report
-**Status:** Not started
+**Status:** In progress. Verdict card, severity words, technical details and AI check section done in Layers 1-3; Report button and screenshots remain.
 **Stories:** US-01, US-06, US-10 · **ADRs:** 002, 008
 
-- [ ] Traffic light verdict with WindyMail weather labels and plain-language summary (ADR-014)
-- [ ] Collapsible technical details
+- [x] Traffic light verdict with WindyMail weather labels and plain-language summary (ADR-014); severity words per reason; "🤖 AI check" section (Layer 3)
+- [x] Collapsible technical details (Layer 2, Step 8)
 - [ ] Report to Security Team button (mock webhook) in organization mode; "Report phishing" guidance in personal mode (ADR-015, US-13)
 - [ ] Screenshots for README
 

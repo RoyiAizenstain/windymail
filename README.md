@@ -69,6 +69,7 @@ The backend runs deterministic checks on every email ([`backend/app/signals/`](b
 | **Links** | Visible text that is an address but goes somewhere else; destinations that are IP addresses, including decimal and hex forms (`http://3232235777`); URL shorteners; `javascript:` and `data:` links | High, medium, low, high |
 | **Attachments** | Programs and scripts (`.exe`, `.js`, `.lnk`, ...), double extensions (`invoice.pdf.exe`), the right-to-left override trick in names: high. Macro Office files, disk images, HTML and SVG attachments (HTML smuggling): medium. Archives: low | By type |
 | **Hidden content** | Text or links hidden with inline styles (`display:none`, `font-size:0`, ...); short hidden preview text, normal in newsletters, is ignored | Medium with a link, low otherwise |
+| **Language** (English, Hebrew) | Pressure tactics by phrase: urgency, authority, requests for passwords or codes, requests for money; phrases aimed at an AI ("ignore previous instructions"). See [LLM safety](#llm-safety) | Any tactic alone: low. Pressure with a request: medium. AI-directed instructions: medium, high when hidden |
 | **Size** | Body trimmed to fit the request budget | Low ("too long to check fully"), so trimming is never a silent gap |
 
 **How links are read.** Every link is normalized the way a browser reads it before any check: whitespace and backslashes, the `user@host` trick (`https://paypal.com@evil.xyz` goes to `evil.xyz`), percent-encoding, punycode, numeric IP forms. Google (`google.com/url?q=`) and Outlook SafeLinks redirects are unwrapped to their real target. On any other site, web addresses carried inside a link (`?to=https://...`) also get the IP, shortener and lookalike checks, but are not trusted as the destination, since an attacker could add `?x=https://paypal.com` as a decoy. Links are parsed only: the backend never fetches or resolves an attacker's URL.
@@ -123,10 +124,13 @@ node addon/test/logic.test.js     # from the repo root: add-on request/response/
 | `GOOGLE_CLIENT_ID` | Yes | Expected `aud` of the add-on's ID token. Find it by running `logTokenAudience()` ([addon/Diagnostics.js](addon/Diagnostics.js)) in the Apps Script editor. |
 | `SOC_WEBHOOK_URL` | No | When set, the add-on runs in organization mode (Report button). Empty means personal mode. |
 | `ENABLE_API_DOCS` | No | Serve `/docs` and `/openapi.json`. Default `false`. |
+| `ANTHROPIC_API_KEY` | No | Enables the AI check. Without it the backend runs on its rules only and marks results `partial`. Set a monthly spend limit on the key in the Anthropic Console. |
+| `LLM_ENABLED` | No | `false` turns the AI check off without a deploy. Default `true`. |
+| `LLM_MODEL` | No | Default `claude-haiku-5-5` ([ADR-016](docs/architecture-decisions.md)). |
 
 ## Deployment
 
-**Backend on Render** ([ADR-012](docs/architecture-decisions.md)). Free tier, Frankfurt, auto-deploy on push to `main`; configuration in [`render.yaml`](render.yaml). Set `GOOGLE_CLIENT_ID` in the Render dashboard. The free tier sleeps after ~15 idle minutes, so an UptimeRobot monitor pings the unauthenticated `GET /health` (fixed `{"status":"ok"}`, nothing else) every 5 minutes.
+**Backend on Render** ([ADR-012](docs/architecture-decisions.md)). Free tier, Frankfurt, auto-deploy on push to `main`; configuration in [`render.yaml`](render.yaml). Set `GOOGLE_CLIENT_ID` and `ANTHROPIC_API_KEY` in the Render dashboard, never in the repo. Each call to the AI check writes one log line with its outcome, model and latency (`llm: outcome=ok model=claude-haiku-5-5 latency_ms=1955`), never the email or the answer. The free tier sleeps after ~15 idle minutes, so an UptimeRobot monitor pings the unauthenticated `GET /health` (fixed `{"status":"ok"}`, nothing else) every 5 minutes.
 
 **Add-on with clasp:**
 ```bash
@@ -134,7 +138,7 @@ npm install -g @google/clasp
 clasp login                       # the Google account that will use the add-on
 clasp push                        # from the repo root; pushes addon/ per .clasp.json
 ```
-Then in the Apps Script editor: **Deploy → Test deployments → Install**, and open any email in Gmail. If you deploy your own backend, update `BACKEND_BASE_URL` in [addon/Config.js](addon/Config.js) and `urlFetchWhitelist` in [addon/appsscript.json](addon/appsscript.json) together.
+Then in the Apps Script editor: **Deploy → Test deployments → Install**, and open any email in Gmail. When a change touches both sides, deploy the backend first and wait until Render shows it live, then `clasp push`: the backend rejects request fields it doesn't know yet. If you deploy your own backend, update `BACKEND_BASE_URL` in [addon/Config.js](addon/Config.js) and `urlFetchWhitelist` in [addon/appsscript.json](addon/appsscript.json) together.
 
 Google shows an "unverified app" warning for a personal test deployment; that is expected. A real rollout would go through Google's verification or a Workspace admin install.
 

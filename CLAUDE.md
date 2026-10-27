@@ -19,7 +19,7 @@ When starting a session, check the status lines in `development-layers.md` to se
 ## Tech stack (ADR-016)
 * **Add-on:** Google Apps Script (JavaScript) + CardService, managed with `clasp`
 * **Backend:** Python 3.12, FastAPI, Pydantic v2, `google-auth`, BeautifulSoup, `tldextract`, `httpx`
-* **LLM:** Anthropic API, Claude Haiku
+* **LLM:** Anthropic API via the official `anthropic` SDK (2.3.0, pinned), Claude Haiku `claude-haiku-5-5`, model name a setting (`LLM_MODEL`)
 * **Tests & quality:** `pytest`, `ruff`, type hints
 * **Repo:** `/addon`, `/backend`, `/docs`, `README.md`
 
@@ -28,10 +28,19 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 
 ## Core rules for working on this repo
 * Email content, attachments, and all external responses (LLM, APIs) are untrusted input.
-* The LLM never decides the score alone (ADR-003).
-* UI only through CardService; LLM text rendered as plain text (ADR-002).
-* Secrets only from environment variables; never log email bodies or tokens.
+* The LLM never decides the score alone (ADR-003): its findings add at most +20 and never subtract.
+* The LLM returns labels only; the card never shows text the model wrote, only fixed wording per label (ADR-019).
+* UI only through CardService; every untrusted string escaped as plain text (ADR-002).
+* Reasons use fixed wording from `backend/app/signals/messages.py`; only normalized technical values (domains, IPs, extensions, auth results) are echoed (ADR-017).
+* Never fetch or resolve a URL from an email (SSRF); links are parsed only.
+* Secrets only from environment variables; never log email bodies, prompts, LLM answers or tokens.
 * Each layer must end in a working demo before starting the next.
+
+## Working on the code
+* **Backend tests:** `cd backend && .venv/Scripts/python -m pytest -q && .venv/Scripts/ruff check . && .venv/Scripts/ruff format --check .` (Windows venv; the system Python has no pytest). Tests never call the real LLM: `conftest.py` clears the LLM settings.
+* **Add-on checks:** `node addon/test/logic.test.js` from the repo root.
+* **Deploy:** `git push` to `main` → Render redeploys the backend. `clasp push` from the repo root → updates the add-on. When both change: backend first, wait until Render shows it live, then `clasp push` (the backend rejects request fields it doesn't know).
+* **Live check:** Render logs carry one line per LLM call: `llm: outcome=ok|skipped:no_key|timeout|status:… model=… latency_ms=…`.
 
 ## Verdict thresholds
 * 🟢 0-29 Safe (☀️ Clear skies) · 🟡 30-69 Suspicious (🌥️ Storm watch) · 🔴 70-100 Malicious (⛈️ Storm warning)
@@ -41,4 +50,7 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 **Wednesday 28.10.2026, 11:00.** Scope cut per ADR-013. Herd Immunity is the only stretch goal.
 
 ## Open items
-Scoring model (ADR-010). Hosting decided: Render free tier with keep-warm ping (ADR-012).
+* **Status (27.10):** Layers 1-3 done (skeleton, rule engine, bounded LLM); Layer 4 (backend security) next. Live A/B prompt-injection email test from Layer 3 not yet reported.
+* **Not built yet (Layer 4):** whole-request 200 KB cap (413), per-user rate limiting (429), replacing uvicorn's access log (it records client IPs).
+* **Scoring (ADR-010):** provisional model live (high 35 / medium 15 / low 5 per reason, LLM +20 cap); final weights still open.
+* Hosting decided: Render free tier with keep-warm ping (ADR-012).
