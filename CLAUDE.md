@@ -29,7 +29,7 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 ## Core rules for working on this repo
 * Email content, attachments, and all external responses (LLM, APIs) are untrusted input.
 * The LLM never decides the score alone (ADR-003): its findings add at most +20 and never subtract.
-* The LLM returns labels only; the card never shows text the model wrote, only fixed wording per label (ADR-019).
+* The LLM returns labels only; the card never shows text the model wrote, only fixed wording per label (ADR-019). It is one bounded call, not an agent: the model never chooses or calls tools.
 * UI only through CardService; every untrusted string escaped as plain text (ADR-002).
 * Reasons use fixed wording from `backend/app/signals/messages.py`; only normalized technical values (domains, IPs, extensions, auth results) are echoed (ADR-017).
 * Never fetch or resolve a URL from an email (SSRF); links are parsed only.
@@ -50,7 +50,7 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 **Wednesday 28.10.2026, 11:00.** Scope cut per ADR-013. Herd Immunity is the only stretch goal.
 
 ## Open items
-* **Status (27.10):** Layers 1-4 done (skeleton, rule engine, bounded LLM, backend security); Layer 5 (scoring) next. Open live checks: the A/B prompt-injection email test (Layer 3) and an optional 429 test from Gmail (Layer 4).
+* **Status (27.10):** Layers 1-5 done (skeleton, rule engine, bounded LLM, backend security, scoring); Layer 6 (Report button) next. Open live checks: the A/B prompt-injection email test (Layer 3) and an optional 429 test from Gmail (Layer 4).
 * **Layer 4 built** in `app/security.py`: 200 KB cap (413), per-user rate limit (429), 422 and 500 responses that never echo input, own access log without client IPs (`app.access`, `X-Request-ID`).
-* **Scoring (ADR-010):** provisional model live (high 35 / medium 15 / low 5 per reason, LLM +20 cap); final weights still open.
+* **Scoring (ADR-010, accepted):** high 35 / medium 15 / low 5 per reason, LLM +20 cap; decisive findings (`invoice.pdf.exe`, right-to-left file names, hidden AI instructions) set a minimum of 70. Any scoring change must keep `pytest tests/test_corpus.py` green (16 realistic emails with expected verdicts).
 * Hosting decided: Render free tier with keep-warm ping (ADR-012).

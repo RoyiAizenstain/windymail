@@ -358,7 +358,7 @@ Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Goo
 ---
 
 ## Layer 5: Scoring Model (simple)
-**Status:** In progress (27.10). Steps 1-4 done (ADR-010 accepted; 16-email corpus all correct, baseline 10; AI impersonation label; points on the card); Step 5 (deploy and live check) next.
+**Status:** Done (27.10). ADR-010 accepted; 16-email corpus all correct (baseline 10); AI impersonation label; points on the card. Deployed (backend and add-on); the Gmail check of the new verdicts is open.
 **Stories:** US-02 · **ADRs:** 003, 010
 
 - [x] Weighted sum of signals, capped LLM contribution, clamp to 0-100 (provisional, Layers 2-3)
@@ -399,13 +399,13 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 - Check: add-on checks pass.
 
 **Step 5: Deploy and live check**
-- [ ] Backend first, then `clasp push`
+- [x] Backend first (`76361a3` live 27.10, 11:10 UTC), then `clasp push`
 - [ ] Live: a CEO gift-card email is at least Suspicious; the phishing test email Malicious; the shotim newsletter and a normal email Safe; Technical details show points
 - Check: verdicts as expected in Gmail.
 
 **Step 6: Close the layer**
-- [ ] README: Scoring section (the table of points, the decisive findings, the LLM cap, why it is additive and explainable, a worked example)
-- [ ] ADR-010 Accepted; architecture.md (`points` in the contract); tracker; CLAUDE.md
+- [x] README: Scoring section (the table of points, the decisive findings, the LLM cap, why it is additive and explainable, a worked example, how the weights were checked); LLM safety gains "Why one call, not an agent"
+- [x] ADR-010 Accepted; architecture.md (`points` in the contract); tracker; CLAUDE.md; future work: enrichment from our own code (domain age, Safe Browsing), more AI labels
 
 ---
 
@@ -444,6 +444,8 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 
 ## Future Work (documented in README, not built)
 * Deep Scan with URL reputation lookups (US-05)
+* Sender and link enrichment called from our own code, never chosen by the AI (no agent: the email would steer the tools): domain age (RDAP; a domain registered days ago is a strong sign), Google Safe Browsing for links
+* More AI labels (secrecy, "change of bank details"); letting the AI name the brand it sees, validated strictly, for a generic impersonation check
 * Automatic SOC escalation (US-08)
 * Attachment checks beyond the filename, in two levels (27.10, deferred for the deadline):
   * **Level 1, backend only, data already received:** more risky types now used in attacks (`.one`, `.xll`, `.chm`, `.url`, `.appx`, `.msix`, `.iqy`, `.slk`, `.library-ms`); declared MIME type contradicting the name (an `application/x-msdownload` file named `.pdf`) → high.

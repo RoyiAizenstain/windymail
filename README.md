@@ -92,10 +92,41 @@ An LLM (Claude Haiku, `claude-haiku-5-5`) adds what fixed rules can't: recognizi
 
 **When the LLM is unavailable** (no key, timeout after 5 s with one retry, rate limit, refusal, invalid answer, or switched off with `LLM_ENABLED=false`), the backend returns the rules' result marked `partial`, and the card shows "🌫️ Limited visibility". The verdict always arrives. Logs record the outcome, model and latency only, never the prompt or the answer.
 
+**Why one call, not an agent.** An agent lets the model choose and call tools (open a link, look up a domain) in a loop. Here the input is written by the attacker, so an agent would let the email steer what the system *does*, not only what it says: an instruction like "check this link for me" becomes a request to an internal address (SSRF), and tool calls become a way to leak data. It would also be several times slower than the 1.5-2.5 s single call, and harder to test and explain. Extra facts that would help (domain age, link reputation) belong in our own code, called with fixed inputs, timeouts and validation, never chosen by the model; they are listed as future work.
+
 **Language checks without the LLM.** Rules in English and Hebrew flag urgency, authority, requests for credentials and requests for money, on normalized text (zero-width characters, Hebrew vowel marks and attached prefixes handled). Any tactic alone is minor; pressure together with a request for a password, code or money, the scam formula, is worth checking.
 
 ## Scoring
-_To be written (Layer 5)._
+
+The score is additive and explainable: every reason on the card carries its points, and they add up to the score ([ADR-010](docs/architecture-decisions.md)).
+
+| | Points |
+|---|---|
+| High-risk reason | 35 |
+| Worth-checking reason | 15 |
+| Minor reason | 5 |
+| AI check, all its reasons together | at most 20, never subtracts |
+| Total | clamped to 0-100 |
+
+**Verdict:** 0-29 ☀️ Safe · 30-69 🌥️ Suspicious · 70-100 ⛈️ Malicious.
+
+**Rules that keep it honest:**
+* **Once per reason, not per occurrence.** Ten shortened links count once, so volume alone can't reach Malicious.
+* **Decisive findings set a minimum of 70** on their own, because no legitimate email does them: a trusted extension in front of a program (`invoice.pdf.exe`), the right-to-left trick in a file name, and instructions to an AI hidden from the reader. The card's summary says when this applied.
+* **The AI adds only what the rules missed,** so agreement isn't counted twice, and it can never lower a score. A fooled model fails to add points; it can't make a malicious email look safe.
+* **Pressure together with a request** for a password, code or money is high: a text-only CEO scam is Suspicious on its own, and Malicious with any other strong sign.
+
+**Worked example** (Hebrew bank scam from the test set): "בנק לאומי" <security@leumi-secure.co>, "החשבון שלך ייחסם תוך 24 שעות. אמת את פרטי החשבון".
+
+| Reason | Severity | Points |
+|---|---|---|
+| Pressures you and asks for your details | High | 35 |
+| Display name names a bank the domain doesn't belong to | Worth checking | 15 |
+| Sender's domain uses the bank's name without being the bank | Worth checking | 15 |
+| The link's domain does the same | Worth checking | 15 |
+| **Score** | | **80 · ⛈️ Malicious** |
+
+**How the weights were checked.** They are hand-set, not learned. A fixed set of 16 realistic emails, English and Hebrew, legitimate and malicious, each with the verdict it should get, runs as a test ([`backend/tests/fixtures/corpus/`](backend/tests/fixtures/corpus/); `pytest tests/test_corpus.py -s` prints the score table). On the first run, all 9 legitimate emails were Safe but 6 of 7 malicious ones were too mild; the rules above fixed them, and all 16 now pass. One case is Suspicious by decision: a fake Microsoft warning with a mismatched link (55) has two strong signs but neither decisive, and a special combination rule would make the score harder to explain. This guards against regressions; it is not a measured error rate.
 
 ## Security
 
