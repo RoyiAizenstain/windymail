@@ -56,7 +56,8 @@ var PERSONAL_REPORT_LINES = [
 ];
 
 /** Organization mode: what the Report button sends (ADR-008). */
-var REPORT_NOTE = 'The Report button sends the score and findings, never the email itself.';
+var REPORT_NOTE = 'Sends the score and findings, never the email itself.';
+var REPORT_BUTTON_COLOR = '#1A73E8';
 
 /** Shown with no email open: what WindyMail does and how to read a result. */
 function buildHomepageCard() {
@@ -99,6 +100,7 @@ function buildResultCard(message, result) {
   if (result.summary) {
     verdict.addWidget(CardService.newTextParagraph().setText(toPlainText(result.summary)));
   }
+  if (result.mode === 'organization') addReportButton(verdict, message, result);
 
   var reasons = CardService.newCardSection().setHeader('Why');
   if (result.reasons.length === 0) {
@@ -124,13 +126,6 @@ function buildResultCard(message, result) {
   if (result.mode !== 'organization') card.addSection(buildPersonalReportSection());
   card.addSection(email);
   if (result.reasons.length > 0) card.addSection(buildDetailsSection(result.reasons));
-  if (result.mode === 'organization') {
-    // Last, right above the footer button it explains.
-    card.addSection(
-      CardService.newCardSection().addWidget(CardService.newTextParagraph().setText(REPORT_NOTE))
-    );
-    card.setFixedFooter(buildReportFooter(message, result));
-  }
   return card.build();
 }
 
@@ -201,8 +196,8 @@ function buildAiSection(ai) {
 
 /**
  * Personal mode: there is no security team, so point to Gmail's own "Report
- * phishing" (US-13, ADR-015). Organization mode has the Report button in the fixed
- * footer instead (US-06, ADR-008). Both shown for every verdict: the user may spot
+ * phishing" (US-13, ADR-015). Organization mode has the Report button under the
+ * verdict instead (US-06, ADR-008). Both shown for every verdict: the user may spot
  * something the checks missed.
  */
 function buildPersonalReportSection() {
@@ -213,16 +208,37 @@ function buildPersonalReportSection() {
   return section;
 }
 
-function buildReportFooter(message, result) {
-  return CardService.newFixedFooter().setPrimaryButton(
-    CardService.newTextButton()
-      .setText('Report to Security Team')
-      .setOnClickAction(
-        CardService.newAction()
-          .setFunctionName('onReport')
-          .setParameters(reportParameters(message.getId(), result))
-      )
-  );
+/**
+ * The Report button, centered under the verdict, with the line on what it sends.
+ * Centering needs Columns; where a Gmail client lacks them, a plain button set
+ * keeps the card working.
+ */
+function addReportButton(section, message, result) {
+  var button = CardService.newTextButton()
+    .setText('Report to Security Team')
+    .setTextButtonStyle(CardService.TextButtonStyle.FILLED)
+    // Set here: the top bar is white, and filled buttons would take its color.
+    .setBackgroundColor(REPORT_BUTTON_COLOR)
+    .setOnClickAction(
+      CardService.newAction()
+        .setFunctionName('onReport')
+        .setParameters(reportParameters(message.getId(), result))
+    );
+  var buttons = CardService.newButtonSet().addButton(button);
+  var note = CardService.newTextParagraph().setText(REPORT_NOTE);
+  var centered;
+  try {
+    centered = CardService.newColumns().addColumn(
+      CardService.newColumn()
+        .setHorizontalAlignment(CardService.HorizontalAlignment.CENTER)
+        .addWidget(buttons)
+        .addWidget(note)
+    );
+  } catch (err) {
+    section.addWidget(buttons).addWidget(note);
+    return;
+  }
+  section.addWidget(centered);
 }
 
 /** Action parameters must be strings; the reason IDs travel as one comma-joined value. */
