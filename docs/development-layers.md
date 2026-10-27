@@ -420,13 +420,52 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 
 ---
 
+## Layer 6.5: UI
+**Status:** In progress (27.10). Card built and live; banner round 2 and the full live check remain.
+**Stories:** US-01, US-06, US-10, US-13 · **ADRs:** 002, 014, 015
+
+Rules: CardService only; the verdict never relies on color alone (word + shape); every untrusted string escaped. One step at a time, each with its own check. Design source: the "WindyMail Assets" Claude Design canvas (logo, wordmark, banners, card mockup, font options).
+
+**Step 1: Decisions**
+- [x] **Decision:** verdict banners as images (CardService sets no fonts or sizes; only an image can carry a large verdict word and a brand font)
+- [x] **Decision:** font Sora, for the wordmark and banners only; the rest of the card stays in Gmail's own font
+- [x] **Decision:** button "Report to Security Team" (plain: an action, not a headline); confirmation in ADR-014 wording. ADR-014 updated
+- [x] **Decision:** keep the current add-on logo (`logoUrl`)
+
+**Step 2: Verdict block**
+- [x] Banner image per verdict; score line `■■■■■□□□□□ 52/100 · Suspicious` (squares read without color, verdict word kept in text in case the image doesn't load); action line
+- [x] Wordmark only on the homepage: Gmail's bar already names WindyMail, so the reasons start higher (after the first live look)
+- Check: add-on checks (score line at 0, 52, 100; verdict word)
+
+**Step 3: Reasons**
+- [x] One row per reason: shape and severity word on top (▲ High risk, ● Worth checking, ○ Minor; "· AI check" for reasons only the AI found), text below
+- Check: add-on checks updated; escaping unchanged
+
+**Step 4: Report**
+- [x] Organization mode: button in a fixed footer, always in view; a line in the body says what is sent. Personal mode: "Report phishing" guidance. Confirmation card
+- Check: add-on checks (report parameters, personal guidance)
+
+**Step 5: Homepage and error card**
+- [x] Homepage: wordmark, one intro line, "How to read the result" with the three verdicts
+- Error card unchanged (already plain and actionable)
+
+**Step 6: Images**
+- [x] Backend serves the card images from a fixed list (`GET /static/{name}`, anything else 404, no token: Gmail fetches them); `ASSET_VERSION` in the add-on refreshes Gmail's image cache. 9 new tests (497 total); add-on checks 52
+- [ ] Round 2: banners narrowed from 600 to 520 px on the canvas (word and picture about 15% larger in Gmail); **You:** export Safe, Suspicious, Malicious again (PNG 2×); then replace, push, `clasp push`
+
+**Step 7: Live check**
+- [x] Malicious, organization mode (27.10): banner, score line, reasons, footer button
+- [ ] **You:** Safe and Suspicious, personal mode, homepage
+- [ ] **You:** README screenshots, once, after the final look
+
+**Done when:** all three verdicts and both modes look right in Gmail, tests pass, screenshots taken.
+
+---
+
 ## Layer 7: Demo & Final README
 **Status:** In progress (27.10)
 
-- [x] Card polish: report button in a fixed footer, score bar with the verdict word in text, one row per reason (shape + severity word), Email section collapsed, homepage explains the three verdicts; confirmation in ADR-014 wording
-- [x] Wordmark and verdict banners (Sora) from the Claude Design canvas, served by the backend from a fixed list (`GET /static/{name}`, 9 new tests, 497 total; add-on checks 52)
-- [ ] **You:** `clasp push` after the backend is live, then check Safe, Suspicious and Malicious in both modes
-- [ ] Screenshots for README (after the card polish)
+- [ ] Screenshots for README (after Layer 6.5)
 - [ ] Demo email set prepared in the demo account
 - [ ] Demo script
 - [ ] Fallback recording
