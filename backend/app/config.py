@@ -20,6 +20,15 @@ def _env_bool(name: str, default: bool) -> bool:
     raise ValueError(f"{name} must be true or false")
 
 
+def _env_positive_int(name: str, default: int) -> int:
+    raw = _env_str(name)
+    if raw is None:
+        return default
+    if not raw.isdigit() or int(raw) < 1:
+        raise ValueError(f"{name} must be a positive whole number")
+    return int(raw)
+
+
 def _env_str(name: str) -> str | None:
     raw = os.environ.get(name, "").strip()
     return raw or None
@@ -42,6 +51,8 @@ class Settings:
     anthropic_api_key: str | None = None
     llm_enabled: bool = True
     llm_model: str = "claude-haiku-5-5"
+    # Per-user requests per minute (ADR-011); also caps LLM spend per user.
+    rate_limit_per_minute: int = 20
 
     @property
     def mode(self) -> Mode:
@@ -58,4 +69,5 @@ def get_settings() -> Settings:
         anthropic_api_key=_env_str("ANTHROPIC_API_KEY"),
         llm_enabled=_env_bool("LLM_ENABLED", default=True),
         llm_model=_env_str("LLM_MODEL") or "claude-haiku-5-5",
+        rate_limit_per_minute=_env_positive_int("RATE_LIMIT_PER_MINUTE", default=20),
     )

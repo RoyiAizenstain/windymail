@@ -21,7 +21,7 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
     # Tests never depend on the developer's shell or .env.
     # No real LLM call either: tests that need one install a fake client.
     for name in ("SOC_WEBHOOK_URL", "ENABLE_API_DOCS", "ANTHROPIC_API_KEY", "LLM_ENABLED",
-                 "LLM_MODEL"):  # fmt: skip
+                 "LLM_MODEL", "RATE_LIMIT_PER_MINUTE"):  # fmt: skip
         monkeypatch.delenv(name, raising=False)
     monkeypatch.setenv("GOOGLE_CLIENT_ID", TEST_CLIENT_ID)
     get_settings.cache_clear()

@@ -4,7 +4,13 @@ import json
 import pytest
 from fastapi.testclient import TestClient
 
-from app.security import MAX_REQUEST_BYTES, BodySizeLimit
+from app import main
+from app.analysis import analyze as real
+from app.config import get_settings
+from app.main import create_app
+from app.security import MAX_REQUEST_BYTES, BodySizeLimit, RateLimiter, hash_user
+
+from .conftest import AUTH_HEADERS
 
 MARKER = "SECRET-BODY-CONTENT"
 
@@ -113,3 +119,119 @@ def test_within_limit_reaches_the_app() -> None:
 def test_invalid_content_length_is_400(value: bytes) -> None:
     status, _ = run(BodySizeLimit(echo_length), [(b"content-length", value)], [b"x"])
     assert status == 400
+
+
+# Rate limiting (429)
+
+
+class Clock:
+    def __init__(self, now: float = 1_000.0) -> None:
+        self.now = now
+
+    def __call__(self) -> float:
+        return self.now
+
+
+def test_limit_then_block_with_retry_after() -> None:
+    clock = Clock(1_000.0)  # 40 s into its minute
+    limiter = RateLimiter(3, clock=clock)
+    assert [limiter.check("u") for _ in range(3)] == [None, None, None]
+    assert limiter.check("u") == 20  # seconds until the next window
+
+
+def test_users_are_counted_separately() -> None:
+    limiter = RateLimiter(1, clock=Clock())
+    assert limiter.check("a") is None
+    assert limiter.check("a") is not None
+    assert limiter.check("b") is None
+
+
+def test_window_resets_and_old_entries_are_dropped() -> None:
+    clock = Clock(1_000.0)
+    limiter = RateLimiter(1, clock=clock)
+    limiter.check("a")
+    limiter.check("b")
+    assert limiter.check("a") is not None
+    clock.now += 60
+    assert limiter.check("a") is None
+    assert set(limiter._counts) == {"a"}  # b's finished window was dropped
+
+
+def test_hash_user_is_stable_and_not_the_raw_id() -> None:
+    assert hash_user("user-123") == hash_user("user-123")
+    assert hash_user("user-123") != hash_user("user-124")
+    assert "user-123" not in hash_user("user-123") and len(hash_user("user-123")) == 16
+
+
+def test_api_returns_429_and_skips_analysis(
+    monkeypatch: pytest.MonkeyPatch, valid_request: dict
+) -> None:
+    monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", "2")
+    get_settings.cache_clear()
+    calls = []
+    monkeypatch.setattr(main, "analyze_email", lambda request: calls.append(1) or real(request))
+    client = TestClient(create_app(), headers=AUTH_HEADERS)
+    codes = [client.post("/api/v1/analyze", json=valid_request).status_code for _ in range(3)]
+    assert codes == [200, 200, 429]
+    assert len(calls) == 2  # the blocked request never reached the analysis (or the LLM)
+    blocked = client.post("/api/v1/analyze", json=valid_request)
+    assert blocked.json() == {"detail": "Too many requests"}
+    assert 1 <= int(blocked.headers["Retry-After"]) <= 60
+
+
+def test_rate_limit_setting_must_be_positive(monkeypatch: pytest.MonkeyPatch) -> None:
+    for bad in ("0", "-5", "abc"):
+        monkeypatch.setenv("RATE_LIMIT_PER_MINUTE", bad)
+        get_settings.cache_clear()
+        with pytest.raises(ValueError):
+            get_settings()
+
+
+def test_invalid_token_is_401_not_counted(anon_client: TestClient, valid_request: dict) -> None:
+    headers = {"Authorization": "Bearer wrong"}
+    codes = {anon_client.post("/api/v1/analyze", json=valid_request, headers=headers).status_code
+             for _ in range(25)}  # fmt: skip
+    assert codes == {401}
+
+
+# Errors never echo input (422, 500)
+
+
+@pytest.mark.parametrize(
+    "change",
+    [
+        {"evil_field_" + "x" * 50: MARKER},  # unknown field, attacker-chosen name
+        {"subject": MARKER * 200},  # over-long field
+        {"truncated": MARKER},  # wrong type
+    ],
+)
+def test_422_does_not_echo_input(client: TestClient, valid_request: dict, change: dict) -> None:
+    response = client.post("/api/v1/analyze", json={**valid_request, **change})
+    assert response.status_code == 422
+    assert MARKER not in response.text and "evil_field" not in response.text
+    for error in response.json()["detail"]:
+        assert set(error) == {"loc", "type"}
+
+
+def test_422_keeps_useful_location(client: TestClient, valid_request: dict) -> None:
+    response = client.post("/api/v1/analyze", json={**valid_request, "truncated": "maybe"})
+    assert response.json() == {"detail": [{"loc": ["body", "truncated"], "type": "bool_parsing"}]}
+
+
+def test_invalid_json_does_not_echo(client: TestClient) -> None:
+    response = client.post("/api/v1/analyze", content=b'{"a": "' + MARKER.encode(), headers=JSON)
+    assert response.status_code == 422 and MARKER not in response.text
+
+
+def test_crash_is_generic_500_logged_by_type_only(
+    monkeypatch: pytest.MonkeyPatch, valid_request: dict, caplog: pytest.LogCaptureFixture
+) -> None:
+    def boom(request):
+        raise RuntimeError(MARKER)
+
+    monkeypatch.setattr(main, "analyze_email", boom)
+    client = TestClient(create_app(), headers=AUTH_HEADERS)
+    response = client.post("/api/v1/analyze", json=valid_request)
+    assert response.status_code == 500
+    assert response.json() == {"detail": "Internal error"}
+    assert "RuntimeError" in caplog.text and MARKER not in caplog.text

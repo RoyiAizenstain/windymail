@@ -9,12 +9,18 @@ import logging
 from typing import Annotated
 
 from fastapi import Depends, FastAPI
+from fastapi.exceptions import RequestValidationError
 
 from app.analysis import analyze as analyze_email
-from app.auth import require_user
 from app.config import get_settings
 from app.models import AnalyzeRequest, AnalyzeResponse, HealthResponse
-from app.security import BodySizeLimit
+from app.security import (
+    BodySizeLimit,
+    ErrorShield,
+    RateLimiter,
+    rate_limited_user,
+    validation_error_handler,
+)
 
 
 def _configure_logging() -> None:
@@ -38,8 +44,13 @@ def create_app() -> FastAPI:
         redoc_url=None,
         openapi_url="/openapi.json" if docs_enabled else None,
     )
-    # Whole-request size cap before anything reads the body (ADR-011).
+    # Middleware added last runs first: ErrorShield wraps everything, then the size cap
+    # runs before anything reads the body (ADR-011).
     app.add_middleware(BodySizeLimit)
+    app.add_middleware(ErrorShield)
+    app.add_exception_handler(RequestValidationError, validation_error_handler)
+    # Per app instance, so each test client starts with fresh counters.
+    app.state.rate_limiter = RateLimiter(settings.rate_limit_per_minute)
 
     @app.api_route("/health", methods=["GET", "HEAD"])
     def health() -> HealthResponse:
@@ -49,7 +60,7 @@ def create_app() -> FastAPI:
 
     @app.post("/api/v1/analyze")
     def analyze(
-        request: AnalyzeRequest, user_id: Annotated[str, Depends(require_user)]
+        request: AnalyzeRequest, user_hash: Annotated[str, Depends(rate_limited_user)]
     ) -> AnalyzeResponse:
         return analyze_email(request)
 

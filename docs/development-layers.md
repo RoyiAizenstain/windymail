@@ -292,7 +292,7 @@ Same rules as Layers 1-2: one step at a time, each ends with its own check. **Yo
 ---
 
 ## Layer 4: Backend Security (basic)
-**Status:** In progress (27.10). Steps 1-2 done (decisions in ADR-011; 413 size cap); Step 3 (rate limiting) next.
+**Status:** In progress (27.10). Steps 1-4 done (decisions in ADR-011; 413 size cap; 429 rate limit; errors that don't echo input); Step 5 (request logging) next.
 **Stories:** US-11 · **ADRs:** 011
 
 - [ ] Google ID token verification on `/analyze` and `/report` (`/analyze` done in Layer 1, Step 7; confirm `/report` is covered when it is built)
@@ -325,15 +325,15 @@ Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Goo
 - Check: tests pass.
 
 **Step 3: Hashed user ID and rate limiting (429)**
-- [ ] `app/security.py`: `hash_user(sub)`; fixed-window counter in memory, per hashed user, with a lock (thread pool), stale windows dropped so memory stays bounded
-- [ ] Dependency after `require_user` on `/analyze` (and `/report` when built)
-- [ ] Tests: the 21st request in a minute is 429 with `Retry-After`; another user is unaffected; the window resets; a rejected request never reaches the analysis or the LLM; hashes differ from the raw `sub` and are stable within the process
+- [x] `app/security.py`: `hash_user(sub)` (sha256 with a startup salt, 16 hex characters); `RateLimiter`, fixed window in memory per hashed user, with a lock (thread pool), finished windows dropped so memory stays bounded; one limiter per app instance (`app.state`), so tests start fresh
+- [x] Dependency `rate_limited_user` after `require_user` on `/analyze` (and `/report` when built); `RATE_LIMIT_PER_MINUTE` setting, positive whole number, default 20
+- [x] Tests: over the limit is 429 with `Retry-After`; another user is unaffected; the window resets and old entries are dropped; a blocked request never reaches the analysis or the LLM; invalid tokens are 401 and not counted; hashes differ from the raw `sub` and are stable within the process; bad settings rejected
 - Check: tests pass.
 
 **Step 4: Errors that don't echo input**
-- [ ] Handler for validation errors: `{"detail": [{"loc": [...], "type": "..."}]}`, no `input`, no `msg` built from the value
-- [ ] Generic 500 handler: logs the error type and request ID only
-- [ ] Tests: unknown field, over-long field and wrong type return 422 without the submitted value; a crash returns 500 with no stack trace or content
+- [x] Handler for validation errors: `{"detail": [{"loc": [...], "type": "..."}]}`, no `input`, no `msg`; field names in `loc` pass only if short and lowercase (an unknown field's name is attacker-chosen), otherwise `?`
+- [x] Generic 500: `ErrorShield`, the outermost middleware, catches any unhandled error and logs its type and path only, so the server never logs a traceback whose message could hold request content (request ID added in Step 5)
+- [x] Tests: unknown field (long attacker-chosen name), over-long field, wrong type and invalid JSON return 422 without the submitted value; useful location kept; a crash returns a generic 500 and the log has the error type but not its message (13 new for Steps 3-4, 421 total)
 - Check: tests pass.
 
 **Step 5: Request logging**
