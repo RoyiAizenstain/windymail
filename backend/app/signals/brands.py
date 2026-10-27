@@ -5,6 +5,7 @@ actually comes from, so a match outside them is a meaningful signal.
 """
 
 import re
+import unicodedata
 from dataclasses import dataclass
 
 
@@ -16,19 +17,27 @@ class Brand:
     # Real domains it owns where anyone can have an address (gmail.com): never
     # proof that a sender is the brand, and never a lookalike of it either.
     also_owns: tuple[str, ...] = ()
+    # Hebrew names, matched in display names only, as whole phrases: a bare "לאומי"
+    # also means "national" (ביטוח לאומי), so the bank is "בנק לאומי".
+    hebrew: tuple[str, ...] = ()
 
 
 BRANDS: dict[str, Brand] = {
-    "paypal": Brand(("paypal",), ("paypal.com",)),
+    "paypal": Brand(("paypal",), ("paypal.com",), hebrew=("פייפאל", "פייפל")),
     "microsoft": Brand(
         ("microsoft", "outlook", "office 365", "office365", "onedrive", "sharepoint"),
         ("microsoft.com", "microsoftonline.com", "office.com"),
         ("outlook.com", "live.com", "hotmail.com"),
+        hebrew=("מיקרוסופט",),
     ),
-    "google": Brand(("google", "gmail"), ("google.com", "youtube.com"), ("gmail.com",)),
+    "google": Brand(
+        ("google", "gmail"), ("google.com", "youtube.com"), ("gmail.com",), hebrew=("גוגל",)
+    ),
     "apple": Brand(("apple", "icloud", "itunes"), ("apple.com",), ("icloud.com", "me.com")),
-    "amazon": Brand(("amazon",), ("amazon.com", "amazon.co.uk", "amazon.de", "amazon.fr")),
-    "netflix": Brand(("netflix",), ("netflix.com",)),
+    "amazon": Brand(
+        ("amazon",), ("amazon.com", "amazon.co.uk", "amazon.de", "amazon.fr"), hebrew=("אמזון",)
+    ),
+    "netflix": Brand(("netflix",), ("netflix.com",), hebrew=("נטפליקס",)),
     "dhl": Brand(("dhl",), ("dhl.com", "dhl.de")),
     "fedex": Brand(("fedex",), ("fedex.com",)),
     "linkedin": Brand(("linkedin",), ("linkedin.com",)),
@@ -38,14 +47,21 @@ BRANDS: dict[str, Brand] = {
         ("facebook", "instagram", "whatsapp"),
         ("facebook.com", "facebookmail.com", "meta.com", "instagram.com", "whatsapp.com"),
     ),
-    "leumi": Brand(("leumi",), ("leumi.co.il",)),
-    "hapoalim": Brand(("hapoalim",), ("bankhapoalim.co.il",)),
+    "leumi": Brand(("leumi",), ("leumi.co.il",), hebrew=("בנק לאומי",)),
+    "hapoalim": Brand(("hapoalim",), ("bankhapoalim.co.il",), hebrew=("בנק הפועלים",)),
     "upwind": Brand(("upwind",), ("upwind.io",)),
 }
 
 # Characters that pass for others at a glance. Uppercase I is mapped before lowercasing.
 _SWAPS = (("I", "l"), ("0", "o"), ("1", "l"), ("rn", "m"), ("vv", "w"))
 _MIN_COMPACT_LEN = 6
+
+
+def _hebrew_text(text: str) -> str:
+    """Display name with vowel marks and format characters removed, spaces collapsed."""
+    text = unicodedata.normalize("NFKD", unicodedata.normalize("NFKC", text))
+    text = "".join(ch for ch in text if unicodedata.category(ch) not in ("Cf", "Mn"))
+    return re.sub(r"\s+", " ", text)
 
 
 def skeleton(text: str) -> str:
@@ -63,8 +79,12 @@ def brands_named_in(text: str) -> list[str]:
     shape = skeleton(text)
     words = " ".join(re.findall(r"[a-z0-9]+", shape))
     compact = words.replace(" ", "")
+    hebrew = _hebrew_text(text)
     found = []
     for brand_id, brand in BRANDS.items():
+        if any(name in hebrew for name in brand.hebrew):
+            found.append(brand_id)
+            continue
         for name in brand.words:
             whole_word = re.search(rf"(?<![a-z0-9]){re.escape(name)}(?![a-z0-9])", words)
             spaced_out = len(name) >= _MIN_COMPACT_LEN and name.replace(" ", "") in compact

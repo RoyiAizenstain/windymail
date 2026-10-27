@@ -358,7 +358,7 @@ Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Goo
 ---
 
 ## Layer 5: Scoring Model (simple)
-**Status:** In progress (27.10). Steps 1-2 done; Step 3 applied (ADR-010 accepted): 13 of 16 corpus emails right, 3 malicious ones still too mild, decision pending.
+**Status:** In progress (27.10). Steps 1-3 done (ADR-010 accepted; 16-email corpus all correct, baseline 10); Step 4 (points on the card) next.
 **Stories:** US-02 · **ADRs:** 003, 010
 
 - [x] Weighted sum of signals, capped LLM contribution, clamp to 0-100 (provisional, Layers 2-3)
@@ -387,7 +387,8 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 **Step 3: Apply the scoring rules**
 - [x] `manipulation_strong` high; decisive floor at 70 in `scoring.py` (`score()` returns score, reasons with points, and whether the floor applied); `points` on each reason, the AI's split within its +20 cap; fixed summary sentence when the floor applied
 - After the approved rules: CEO scam Suspicious, `.pdf.exe` and hidden AI instructions Malicious; all legitimate emails still Safe. Still too mild: Hebrew bank scam 65 (the display-name brand check reads Latin letters only, so "בנק לאומי" is invisible to it), HTML smuggling 20, Microsoft link mismatch 55; waiting on a decision
-- [ ] Tests: floor applies alone and never lowers a higher score; the LLM cap still holds; points on reasons add up to the score (except when the floor lifts it, which is stated); every corpus fixture gets its expected verdict
+- [x] Follow-up decisions (27.10): Hebrew brand names in the display-name check, whole phrases only (Hebrew bank scam 65 → 80); HTML and SVG attachments high (HTML smuggling 20 → 40); fake Microsoft link mismatch accepted as Suspicious (55), recorded in ADR-010 and the fixture
+- [x] Tests: floor applies alone and never lowers a higher score; the LLM cap still holds and is split across AI reasons; points on reasons add up to the score (except when the floor lifts it, which the summary states); Hebrew brand names and common Hebrew words that must not match; all 16 corpus emails get their expected verdict (458 total)
 - Check: tests pass; the corpus table matches expectations.
 
 **Step 4: Card**

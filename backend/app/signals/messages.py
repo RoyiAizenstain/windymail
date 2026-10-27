@@ -187,7 +187,7 @@ CATALOG: dict[str, Message] = {
     ),
     "attachment_web_page": Message(
         category="attachment",
-        severity="medium",
+        severity="high",
         text="An attachment is a web page file. These can show fake sign-in pages.",
         text_many="{count} attachments are web page files. These can show fake sign-in pages.",
         details="Extension",

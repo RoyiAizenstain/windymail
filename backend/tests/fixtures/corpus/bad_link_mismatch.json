@@ -1,5 +1,5 @@
 {
-  "about": "Fake Microsoft storage warning: link text says microsoft.com, goes elsewhere.",
+  "about": "Fake Microsoft storage warning: link text says microsoft.com, goes elsewhere. Expected Suspicious, not Malicious (decided 27.10, ADR-010): two strong signs, neither decisive alone, and the model stays additive; Suspicious already tells the user not to click. The AI check may add up to +20.",
   "request": {
     "message_id": "bad_link_mismatch",
     "from": "Microsoft 365 <no-reply@m365-notify.com>",
@@ -12,6 +12,6 @@
     "truncated": false
   },
   "expect": {
-    "verdict": "malicious"
+    "verdict": "suspicious"
   }
 }

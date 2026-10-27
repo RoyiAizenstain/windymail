@@ -22,10 +22,10 @@
     "reasons": [
       "sender_lookalike",
       "link_text_mismatch",
+      "attachment_web_page",
       "manipulation_strong",
       "display_name_brand",
       "reply_to_mismatch",
-      "attachment_web_page",
       "link_shortener"
     ]
   }
