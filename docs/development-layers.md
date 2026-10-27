@@ -221,7 +221,7 @@ Same rules as Layer 1: one step at a time, each ends with its own check. **You**
 ---
 
 ## Layer 3: LLM Integration
-**Status:** Done (27.10), one live check open. LLM live on Render (Haiku, 1.5-2.4 s), AI check section verified in Gmail. The "done when" case (an injection line never lowers the score) is covered by automated tests on the phishing fixtures; the live A/B injection email test is not yet reported.
+**Status:** Done (27.10). LLM live on Render (Haiku, 1.5-2.4 s), AI check section verified in Gmail. The "done when" case (an injection line never lowers the score) is covered by automated tests on the phishing fixtures and seen live: a gift-card email with a visible "AI assistant: …" line scored 70, Malicious, the line counted against it (27.10). The same email without the line was not run live (optional).
 **Stories:** US-04, US-09 · **ADRs:** 003, 004, 005
 
 - [x] Psychological vector analysis
@@ -358,7 +358,7 @@ Already in place from Layers 1-3: Google ID token on `/analyze` (401, 503 if Goo
 ---
 
 ## Layer 5: Scoring Model (simple)
-**Status:** Done (27.10). ADR-010 accepted; 16-email corpus all correct (baseline 10); AI impersonation label; points on the card. Deployed (backend and add-on); the Gmail check of the new verdicts is open.
+**Status:** Done (27.10). ADR-010 accepted; 16-email corpus all correct (baseline 10); AI impersonation label. Deployed and verified in Gmail on all three verdicts (Safe 5-20, Suspicious 50, Malicious 70 and 100). Points per reason were on the card until Layer 6.5, then removed from it (threat T12); they stay in the API response.
 **Stories:** US-02 · **ADRs:** 003, 010
 
 - [x] Weighted sum of signals, capped LLM contribution, clamp to 0-100 (provisional, Layers 2-3)
@@ -421,7 +421,7 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 ---
 
 ## Layer 6.5: UI
-**Status:** Done (27.10). Card built and live; Safe and Malicious checked in Gmail. Live checks still open (You): AI check colors, a Suspicious email, the homepage; personal mode optional. Screenshots move to Layer 7.
+**Status:** Done (27.10). Card built and live; all three verdicts, the AI check colors, the homepage and the report confirmation checked in Gmail. Personal mode optional, not checked. Screenshots taken in Layer 7.
 **Stories:** US-01, US-06, US-10, US-13 · **ADRs:** 002, 014, 015
 
 Rules: CardService only; the verdict never relies on color alone (word + shape); every untrusted string escaped. One step at a time, each with its own check. Design source: the "WindyMail Assets" Claude Design canvas (logo, wordmark, banners, card mockup, font options).
@@ -474,14 +474,14 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 ---
 
 ## Layer 7: Demo & Final README
-**Status:** In progress (27.10). Done: README, demo script, secrets check. Remaining (You): demo emails, fallback recording
+**Status:** Nearly done (27.10). Done: README with screenshots, demo script, secrets check. Remaining (You): the last demo emails and the fallback recording.
 
 - [x] Screenshots for README (27.10): Malicious, Suspicious, prompt injection, AI check, report sent, homepage; taken with Playwright from a separate Chrome profile the user signed in to by hand; panel only, never the inbox ([docs/screenshots/](screenshots/))
-- [ ] Demo email set prepared in the demo account
+- [ ] Demo email set prepared in the demo account. In the inbox (27.10): phishing test (Malicious, 100), gift-card favour "[WindyMail demo] Quick favour" (Suspicious, 50), gift-card email with a visible AI instruction (Malicious, 70), "Are you at your desk?" (Safe, 20, AI tags). Still to send (You): a plain Safe email, the hidden-instruction invoice, the Hebrew bank email (all optional)
 - [x] Demo script ([demo-script.md](demo-script.md)): demo emails that survive real sending, 7-minute flow, failure handling, likely questions
-- [ ] Fallback recording
+- [ ] **You:** fallback recording, 2-3 minutes, following the demo script
 - [x] Pre-demo warm-up step in the demo script (call `/health`, run one scan)
-- [x] README: status, "What it does", reporting and card images in Security, trade-offs, limitations, future work (screenshots still to add)
+- [x] README: status, "What it does" with six screenshots, reporting and card images in Security, trade-offs, limitations, future work
 - [x] Repo check: no secrets committed (27.10: files and full git history scanned for API keys, Google tokens, private keys, webhook URLs; only `.env.example` tracked)
 
 ---

@@ -39,7 +39,7 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 ## Working on the code
 * **Backend tests:** `cd backend && .venv/Scripts/python -m pytest -q && .venv/Scripts/ruff check . && .venv/Scripts/ruff format --check .` (Windows venv; the system Python has no pytest). Tests never call the real LLM: `conftest.py` clears the LLM settings.
 * **Add-on checks:** `node addon/test/logic.test.js` from the repo root.
-* **Deploy:** `git push` to `main` → Render redeploys the backend. `clasp push` from the repo root → updates the add-on. When both change: backend first, wait until Render shows it live, then `clasp push` (the backend rejects request fields it doesn't know).
+* **Deploy:** `git push` to `main` → Render redeploys the backend. `clasp push` from the repo root → updates the add-on. When both change: backend first, wait until Render shows it live, then `clasp push` (the backend rejects request fields it doesn't know). When a card image in `backend/static/` changes, bump `ASSET_VERSION` in `addon/Config.js`, and `clasp push` only after Render serves the new image: Gmail caches each image by its URL, so an early push caches the old one under the new version.
 * **Live check:** Render logs carry one line per request (`app.access: request id=… method=… path=… status=… latency_ms=… user=<hash>`) and one per LLM call (`llm: outcome=ok|skipped:no_key|timeout|status:… model=… latency_ms=…`).
 
 ## Verdict thresholds
@@ -50,7 +50,7 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 **Wednesday 28.10.2026, 11:00.** Scope cut per ADR-013. Herd Immunity is the only stretch goal.
 
 ## Open items
-* **Status (27.10):** Layers 1-5 done (skeleton, rule engine, bounded LLM, backend security, scoring); Layer 6 done: Report button (`/api/v1/report`, mock SOC on webhook.site). Layer 6.5 (UI) done: wordmark and verdict banners (Sora) from the Claude Design canvas, no Technical details on the card (threat T12, ADR-020 future work). Layer 7 next: screenshots, demo script, final README. Open live checks: the A/B prompt-injection email test (Layer 3) and an optional 429 test from Gmail (Layer 4).
+* **Status (27.10):** Layers 1-5 done (skeleton, rule engine, bounded LLM, backend security, scoring); Layer 6 done: Report button (`/api/v1/report`, mock SOC on webhook.site). Layer 6.5 (UI) done: wordmark and verdict banners (Sora) from the Claude Design canvas, no Technical details on the card (threat T12, ADR-020 future work). Layer 7 nearly done: README with screenshots, demo script ([docs/demo-script.md](docs/demo-script.md)), secrets check. Left for the user: the fallback recording and the last demo emails. Optional live checks: personal mode, the injection email without its injected line (Layer 3), a 429 from Gmail (Layer 4). Herd Immunity (stretch) not started.
 * **Layer 4 built** in `app/security.py`: 200 KB cap (413), per-user rate limit (429), 422 and 500 responses that never echo input, own access log without client IPs (`app.access`, `X-Request-ID`).
 * **Scoring (ADR-010, accepted):** high 35 / medium 15 / low 5 per reason, LLM +20 cap; decisive findings (`invoice.pdf.exe`, right-to-left file names, hidden AI instructions) set a minimum of 70. Any scoring change must keep `pytest tests/test_corpus.py` green (16 realistic emails with expected verdicts).
 * Hosting decided: Render free tier with keep-warm ping (ADR-012).
