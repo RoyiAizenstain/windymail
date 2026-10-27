@@ -238,6 +238,7 @@ Google shows an "unverified app" warning for a personal test deployment; that is
 
 **Limitations**
 * **Single instance, in-memory state.** The rate limit, the user-hash salt and its counters reset on restart or redeploy, and don't scale across instances.
+* **One message, not the whole conversation** (threat T14). WindyMail scans the message Gmail opens, normally the latest. An attacker can send a phishing email and then a harmless reply to it, so the card shows Safe above a malicious original. Opening the earlier message scans it, but nothing tells the user to.
 * **The AI check is not fully deterministic.** The same email can get one more or one fewer AI finding between runs. It can only add, so the verdict rarely changes, and the rules alone decide most scores.
 * **What the checks can't see:** what's packed inside attachments (only a few structural facts are read), content hidden by stylesheets, Proofpoint and Mimecast link wrappers, text past the size budget, and the age or reputation of a domain (links are never fetched). See [Signals](#signals).
 * **Email text goes to Anthropic** while the AI check is on, after best-effort masking of links, addresses and numbers. Names and numbers written out in words pass through.
@@ -250,6 +251,7 @@ Google shows an "unverified app" warning for a personal test deployment; that is
 * **Domain age and link reputation** from our own code with fixed inputs and timeouts, never chosen by the model.
 * **Herd Immunity:** "N people in your organization received a similar message", from hashed fingerprints only ([ADR-009](docs/architecture-decisions.md)).
 * **Shared state** (Redis) for the rate limit and a persistent salt, so the backend can run on several instances.
+* **Scan the whole conversation** (threat T14). Every message in the thread not sent by the user, the first one always, sent in the same request; rules only on earlier messages to keep the AI cost and the delay of one message; the conversation gets the worst verdict, with "An earlier message in this conversation looks Malicious"; and a reason when a sender from a new domain joins the thread (hijacked conversations). First step: confirm that the add-on's open-message permission can read the rest of the conversation. If it can't, the full read-all-mail permission would not be worth it, and the gap stays documented.
 * **Deep scan on request** (US-05): a second, slower check the user starts on a Suspicious email, for example domain age and reputation. Today there is one scan per open ([ADR-007](docs/architecture-decisions.md)).
 
 **What I'd do differently**

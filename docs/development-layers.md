@@ -543,6 +543,7 @@ Before this layer, only an attachment's name, type and size were checked (ADR-01
 * Sender and link enrichment called from our own code, never chosen by the AI (no agent: the email would steer the tools): domain age (RDAP; a domain registered days ago is a strong sign), Google Safe Browsing for links
 * More AI labels (secrecy, "change of bank details"); letting the AI name the brand it sees, validated strictly, for a generic impersonation check
 * Automatic SOC escalation (US-08)
+* Scan the whole conversation (threat T14, 27.10): every message not sent by the user, the first always, in one request; rules only on earlier messages, AI on the opened one; worst verdict wins, with an "earlier message" line on the card and reasons split into "This message" / "Earlier in this conversation"; a reason when a new sender domain joins; report the worst message's ID. Step 1 is a spike: can `getThread().getMessages()` run under the open-message scope? If not, keep the gap documented rather than ask for full mailbox access
 * Attachment checks beyond what Layer 8 built:
   * More risky types now used in attacks (`.one`, `.xll`, `.chm`, `.url`, `.appx`, `.msix`, `.iqy`, `.slk`, `.library-ms`); declared MIME type contradicting the name.
   * Old-style Office macros (`.doc` / `.xls` files, OLE format), archives other than zip, nested archives, PDF names written in escaped form (`/J#61vaScript`).

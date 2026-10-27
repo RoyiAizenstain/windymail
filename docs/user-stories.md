@@ -21,6 +21,7 @@ As an employee, I want to see a clear risk verdict when I open an email, so I kn
 * Score 0-100 with Green / Yellow / Red verdict (Safe / Suspicious / Malicious banner: word, shape and color).
 * Result appears in about 3 seconds or less (2-3 s when the backend is warm; a cold start on the free tier can take longer, ADR-012).
 * No security jargon in the main view.
+* **Limitation (27.10):** the verdict covers the opened message, not the whole conversation; a harmless reply can show Safe above a malicious first message (threat T14). Scanning the whole conversation is future work.
 
 **US-02: Understand why** · ✅ Done
 As an employee, I want to see the reasons behind the verdict, so I can trust it and learn to spot threats myself.
