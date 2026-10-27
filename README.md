@@ -247,6 +247,9 @@ Google shows an "unverified app" warning for a personal test deployment; that is
 * **Test deployment.** Google shows an "unverified app" warning; a real rollout needs Google's verification or a Workspace admin install.
 
 **Future work**
+* **Next fix: two known false-positive sources,** found by probing legitimate mail beyond the test set. Both make a legitimate email Suspicious, never Malicious.
+  * *Newsletters behind an unlisted click tracker* (e.g. `trk.klaviyomail.com`): link text `www.shop.com` going to the tracker counts as a high mismatch; with a help-desk Reply-To the email scores 50. Fix: when the text shows the sender's own domain and that sender passed DMARC, count the mismatch as medium. An attacker who passes DMARC can only show their own domain this way, not a brand's, so no tracker list has to be kept.
+  * *Mailing lists and forwarding* (Google Groups and similar) that change the message break DMARC, which counts as high (35, Suspicious). Fix: when Gmail's header shows `arc=pass` (the list vouches for the original), count a DMARC fail as medium.
 * **Automatic alerts for near-certain threats** (score 85 or more, organization mode), sent by the backend with its own score, once per message, with a line on the card saying it was reported ([ADR-008](docs/architecture-decisions.md), US-08).
 * **Domain age and link reputation** from our own code with fixed inputs and timeouts, never chosen by the model.
 * **Herd Immunity:** "N people in your organization received a similar message", from hashed fingerprints only ([ADR-009](docs/architecture-decisions.md)).
