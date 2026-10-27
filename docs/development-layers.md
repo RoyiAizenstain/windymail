@@ -421,7 +421,7 @@ A first check of today's provisional model (27.10) found three problems: a CEO g
 ---
 
 ## Layer 6.5: UI
-**Status:** In progress (27.10). Card built and live; banner round 2 and the full live check remain.
+**Status:** Done (27.10). Card built and live; Safe and Malicious checked in Gmail. Live checks still open (You): AI check colors, a Suspicious email, the homepage; personal mode optional. Screenshots move to Layer 7.
 **Stories:** US-01, US-06, US-10, US-13 · **ADRs:** 002, 014, 015
 
 Rules: CardService only; the verdict never relies on color alone (word + shape); every untrusted string escaped. One step at a time, each with its own check. Design source: the "WindyMail Assets" Claude Design canvas (logo, wordmark, banners, card mockup, font options).
@@ -464,9 +464,9 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 - [x] Safe, organization mode (27.10): wordmark, banner, score line, one reason, AI check; white top bar readable
 - [x] Malicious, organization mode, final look (27.10): centered wordmark with a line under it, colored severity labels, blue Report button in the footer, white top bar
 - [ ] **You:** AI check section colors (scroll down), Suspicious, homepage; personal mode optional
-- [ ] **You:** README screenshots, once, after the final look
+- README screenshots: moved to Layer 7 (taken once, after the final look)
 
-**Done when:** all three verdicts and both modes look right in Gmail, tests pass, screenshots taken.
+**Done when:** all three verdicts and both modes look right in Gmail, tests pass. (Screenshots: Layer 7.)
 
 ---
 
