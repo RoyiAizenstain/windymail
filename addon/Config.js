@@ -4,8 +4,11 @@
  */
 var BACKEND_BASE_URL = 'https://windymail-backend.onrender.com';
 
+/** The add-on logo, shown in card headers; same as "logoUrl" in appsscript.json. */
+var LOGO_URL = 'https://www.gstatic.com/images/icons/material/system/2x/air_googblue_48dp.png';
+
 /** Bump when a card image in backend/static changes, so Gmail's image cache refreshes. */
-var ASSET_VERSION = '1';
+var ASSET_VERSION = '2';
 
 /** Upper bounds matching the backend request schema (backend/app/models.py). */
 var LIMITS = {

@@ -434,7 +434,7 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 
 **Step 2: Verdict block**
 - [x] Banner image per verdict; score line `■■■■■□□□□□ 52/100 · Suspicious` (squares read without color, verdict word kept in text in case the image doesn't load); action line
-- [x] Wordmark only on the homepage: Gmail's bar already names WindyMail, so the reasons start higher (after the first live look)
+- [x] Wordmark only on the homepage, so the reasons start higher (after the first live look)
 - Check: add-on checks (score line at 0, 52, 100; verdict word)
 
 **Step 3: Reasons**
@@ -451,7 +451,8 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 
 **Step 6: Images**
 - [x] Backend serves the card images from a fixed list (`GET /static/{name}`, anything else 404, no token: Gmail fetches them); `ASSET_VERSION` in the add-on refreshes Gmail's image cache. 9 new tests (497 total); add-on checks 52
-- [ ] Round 2: banners narrowed from 600 to 520 px on the canvas (word and picture about 15% larger in Gmail); **You:** export Safe, Suspicious, Malicious again (PNG 2×); then replace, push, `clasp push`
+- [x] Round 2: banners narrowed from 600 to 520 px on the canvas (word and picture about 15% larger in Gmail), rendered at 2×; `ASSET_VERSION` 2
+- [x] Card matched to mockup panel A: header with logo, "WindyMail" and the verdict word (the text fallback if the banner doesn't load); score line without the word; organization mode: no report section, a one-line note above the footer button. Add-on checks 54
 
 **Step 7: Live check**
 - [x] Malicious, organization mode (27.10): banner, score line, reasons, footer button

@@ -31,7 +31,7 @@ t('utf8Length matches Buffer', () => { for (const s of ['abc','ש','😀x','é�
 t('known severity kept, unknown dropped to null', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a',severity:'high'},{text:'b',severity:'<b>evil</b>'}]}); assert.equal(r.reasons[0].severity,'high'); assert.equal(r.reasons[1].severity,null); });
 t('reason label has shape and severity word', () => { assert.equal(ctx.reasonLabel({severity:'high'}), '▲ High risk'); assert.equal(ctx.reasonLabel({severity:'medium'}), '● Worth checking'); assert.equal(ctx.reasonLabel({severity:'low'}), '○ Minor'); });
 t('reason label without severity is empty', () => assert.equal(ctx.reasonLabel({severity:null}), ''));
-t('score line: bar, exact score and verdict word', () => { const ui = ctx.VERDICT_UI.suspicious; assert.equal(ctx.scoreLine(52, ui), '<font color="#B06000">■■■■■</font>□□□□□  <b>52</b>/100 · Suspicious'); });
+t('score line: bar and exact score', () => { const ui = ctx.VERDICT_UI.suspicious; assert.equal(ctx.scoreLine(52, ui), '<font color="#B06000">■■■■■</font>□□□□□  <b>52</b>/100'); });
 t('score line at the edges', () => { assert.ok(ctx.scoreLine(0, ctx.VERDICT_UI.safe).includes('></font>□□□□□□□□□□  <b>0</b>')); assert.ok(ctx.scoreLine(100, ctx.VERDICT_UI.malicious).includes('■■■■■■■■■■</font>  <b>100</b>')); });
 t('every verdict has a word, label, color and action', () => { for (const v of ['safe','suspicious','malicious']) { const ui = ctx.VERDICT_UI[v]; assert.ok(ui.word && ui.label && /^#[0-9A-F]{6}$/.test(ui.color) && ui.action, v); } });
 t('verdict word is upper case in its color', () => assert.equal(ctx.verdictWord(ctx.VERDICT_UI.malicious), '<font color="#C5221F"><b>MALICIOUS</b></font>'));
@@ -56,4 +56,6 @@ t('report request filters and dedupes ids', () => assert.deepEqual(Array.from(ct
 t('report parameters are strings', () => { const p = ctx.reportParameters(123, {score:82, reasons:[{id:'dmarc_fail'},{id:null},{id:'link_ip'}]}); assert.deepEqual({...p}, {messageId:'123', score:'82', reasonIds:'dmarc_fail,link_ip'}); });
 t('personal report guidance mentions Report phishing', () => assert.ok(ctx.PERSONAL_REPORT_LINES.some(l => l.includes('Report phishing'))));
 t('images come from our backend only', () => { const urls = []; ctx.CardService = { newImage: () => { const img = { setImageUrl: (u) => { urls.push(u); return img; }, setAltText: () => img }; return img; } }; for (const v of ['wordmark','safe','suspicious','malicious']) ctx.cardImage(v, 'alt'); for (const u of urls) assert.ok(u.startsWith(ctx.BACKEND_BASE_URL + '/static/') && u.endsWith('.png?v=' + ctx.ASSET_VERSION), u); delete ctx.CardService; });
+t('report note says no email content is sent', () => assert.ok(/never the email itself/.test(ctx.REPORT_NOTE)));
+t('header logo matches the add-on logo', () => assert.ok(fs.readFileSync(path.join(dir,'appsscript.json'),'utf8').includes(ctx.LOGO_URL)));
 console.log('addon logic checks passed: ' + n);

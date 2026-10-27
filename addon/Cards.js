@@ -55,6 +55,9 @@ var PERSONAL_REPORT_LINES = [
     '<b>Report phishing</b>. This helps Gmail protect you and others.',
 ];
 
+/** Organization mode: what the Report button sends (ADR-008). */
+var REPORT_NOTE = 'The Report button sends the score and findings, never the email itself.';
+
 /** Shown with no email open: what WindyMail does and how to read a result. */
 function buildHomepageCard() {
   var intro = CardService.newCardSection()
@@ -81,14 +84,12 @@ function buildHomepageCard() {
 function buildResultCard(message, result) {
   var ui = VERDICT_UI[result.verdict];
 
+  // No wordmark here: the header names WindyMail and carries the verdict word in
+  // text, and the reasons should start as high as possible (homepage only).
   var verdict = CardService.newCardSection()
-    .addWidget(cardImage('wordmark', 'WindyMail'))
     .addWidget(cardImage(result.verdict, ui.word + ' (' + ui.label + ')'))
     .addWidget(
-      CardService.newDecoratedText()
-        .setTopLabel('Risk score')
-        .setText(scoreLine(result.score, ui))
-        .setWrapText(true)
+      CardService.newDecoratedText().setTopLabel('Risk score').setText(scoreLine(result.score, ui))
     )
     .addWidget(CardService.newTextParagraph().setText(toPlainText(ui.action)));
   if (result.partial) {
@@ -117,12 +118,20 @@ function buildResultCard(message, result) {
     .addWidget(decorated('From', message.getFrom()))
     .addWidget(decorated('Subject', message.getSubject() || '(no subject)'));
 
-  var card = CardService.newCardBuilder().addSection(verdict).addSection(reasons);
+  // The header subtitle is the verdict in text, so the card reads the same if the
+  // banner image doesn't load.
+  var card = newCard(ui.word).addSection(verdict).addSection(reasons);
   if (aiSection) card.addSection(aiSection);
-  card.addSection(buildReportSection(result));
+  if (result.mode !== 'organization') card.addSection(buildPersonalReportSection());
   card.addSection(email);
   if (result.reasons.length > 0) card.addSection(buildDetailsSection(result.reasons));
-  if (result.mode === 'organization') card.setFixedFooter(buildReportFooter(message, result));
+  if (result.mode === 'organization') {
+    // Last, right above the footer button it explains.
+    card.addSection(
+      CardService.newCardSection().addWidget(CardService.newTextParagraph().setText(REPORT_NOTE))
+    );
+    card.setFixedFooter(buildReportFooter(message, result));
+  }
   return card.build();
 }
 
@@ -138,15 +147,12 @@ function verdictWord(ui) {
   return '<font color="' + ui.color + '"><b>' + ui.word.toUpperCase() + '</b></font>';
 }
 
-/**
- * "■■■■■□□□□□  52/100 · Suspicious": filled squares read without color, the number
- * is exact, and the verdict word stays in text in case the banner doesn't load.
- */
+/** "■■■■■□□□□□  52/100": filled squares read without color; the number is exact. */
 function scoreLine(score, ui) {
   var filled = Math.round(score / 10);
   return (
     '<font color="' + ui.color + '">' + repeat('■', filled) + '</font>' +
-    repeat('□', 10 - filled) + '  <b>' + score + '</b>/100 · ' + ui.word
+    repeat('□', 10 - filled) + '  <b>' + score + '</b>/100'
   );
 }
 
@@ -192,25 +198,17 @@ function buildAiSection(ai) {
 }
 
 /**
- * Organization mode: what a report sends; the button itself sits in the fixed
- * footer, always in view (US-06, ADR-008). Personal mode: there is no security
- * team, so point to Gmail's own "Report phishing" (US-13, ADR-015). Shown for
- * every verdict: the user may spot something the checks missed.
+ * Personal mode: there is no security team, so point to Gmail's own "Report
+ * phishing" (US-13, ADR-015). Organization mode has the Report button in the fixed
+ * footer instead (US-06, ADR-008). Both shown for every verdict: the user may spot
+ * something the checks missed.
  */
-function buildReportSection(result) {
+function buildPersonalReportSection() {
   var section = CardService.newCardSection().setHeader('Think this email is a scam?');
-  if (result.mode !== 'organization') {
-    PERSONAL_REPORT_LINES.forEach(function (line) {
-      section.addWidget(CardService.newTextParagraph().setText(line));
-    });
-    return section;
-  }
-  return section.addWidget(
-    CardService.newTextParagraph().setText(
-      'Report it to your security team with the button below. They get the risk score ' +
-        'and what WindyMail found, not the content of the email.'
-    )
-  );
+  PERSONAL_REPORT_LINES.forEach(function (line) {
+    section.addWidget(CardService.newTextParagraph().setText(line));
+  });
+  return section;
 }
 
 function buildReportFooter(message, result) {
@@ -302,7 +300,12 @@ function buildErrorCard() {
 
 function newCard(subtitle) {
   return CardService.newCardBuilder().setHeader(
-    CardService.newCardHeader().setTitle('WindyMail').setSubtitle(subtitle)
+    CardService.newCardHeader()
+      .setTitle('WindyMail')
+      .setSubtitle(subtitle)
+      .setImageUrl(LOGO_URL)
+      .setImageStyle(CardService.ImageStyle.CIRCLE)
+      .setImageAltText('WindyMail')
   );
 }
 
