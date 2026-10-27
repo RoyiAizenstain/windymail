@@ -73,7 +73,7 @@ As a security analyst, I want the analysis to resist instructions hidden inside 
 **US-10: See technical details**
 As a security analyst, I want access to the raw technical findings, so I can investigate further.
 * ~~Collapsible details section with authentication results, link destinations, and signal list.~~
-* **Changed (27.10):** not shown on the card, so the add-on is a weaker test lab for attackers (threat T12, ADR-017). The backend still returns the details; analysts get the reason IDs in each report. A details view for analysts only (admin setting) is future work.
+* **Changed (27.10):** not shown on the card, so the add-on is a weaker test lab for attackers (threat T12, ADR-017). The backend still returns the details; analysts get the reason IDs in each report. A details view for analysts only is designed as future work (ADR-020).
 
 ---
 

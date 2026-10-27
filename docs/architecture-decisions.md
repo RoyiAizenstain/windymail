@@ -176,6 +176,16 @@ README.md
 * **What is sent:** the sender's display name and registered domain (never the full address; added 27.10 so the model can judge impersonation, which needs to know who really sent the email), the subject and the plain body (no other headers, no links or attachments), HTML stripped, capped at about 8,000 characters, masked first (ADR-011); a per-request random delimiter around the email; `LLM_ENABLED` switch.
 **Consequences:** A fooled model can at most fail to add points. The card cannot quote or paraphrase the email through the model. The cost is less nuance: the user sees which tactics were found, not a tailored explanation. Haiku is the fastest and cheapest choice but the least robust against subtle manipulation; the architecture, not the model, carries the security guarantee.
 
+## ADR-020: Analyst role for technical details
+**Status:** Proposed, future work (not built: deadline, ADR-013)
+**Context:** Since 27.10 the card hides the parsed values and per-reason points, so an attacker testing drafts learns less (threat T12, ADR-017). Security analysts still need them to investigate (US-10).
+**Decision (design):**
+* **Server-side role:** the backend decides who is an analyst; the add-on never sends a role or a "show details" flag, since anything the client sends can be forged.
+* **Identity:** the email in the Google ID token the backend already verifies (ADR-011), checked against `ANALYST_EMAILS` in the environment. In a real organization: membership of a Google Workspace admin group instead of a list.
+* **Response:** analysts get `details` and `points`; everyone else gets them stripped by the backend, not hidden by the add-on. The add-on shows the "Technical details" section only when they are present.
+* **Audit:** each analyst view logged with the hashed user ID (ADR-011), never the email.
+**Consequences:** Regular users get a weaker oracle; analysts keep the full picture, enforced by the server. Costs: the add-on must request the `email` scope, so every user shares their address with the backend (used only for this check, never logged or stored); the analyst list becomes a security-critical setting.
+
 ---
 
 ## Open Decisions

@@ -192,7 +192,10 @@ Then in the Apps Script editor: **Deploy → Test deployments → Install**, and
 Google shows an "unverified app" warning for a personal test deployment; that is expected. A real rollout would go through Google's verification or a Workspace admin install.
 
 ## Trade-offs, limitations, and future work
-_To be written (Layer 7)._
+_Trade-offs and limitations: to be written (Layer 7)._
+
+**Future work**
+* **Analyst role for technical details** ([ADR-020](docs/architecture-decisions.md)). The card hides the parsed values and per-reason points from everyone, so an attacker testing drafts learns less (threat T12). Analysts would get them back, with the role decided by the backend, never by the add-on: the backend checks the email in the Google ID token it already verifies against an `ANALYST_EMAILS` setting (in a real organization, a Workspace admin group), strips `details` and `points` for everyone else, and logs each analyst view by hashed user ID. Not built for the deadline: it needs the `email` scope from every user and adds a security-critical setting.
 
 ## Design documents
 * [Architecture and API contract](docs/architecture.md)
