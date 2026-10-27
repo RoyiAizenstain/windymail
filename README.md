@@ -4,7 +4,7 @@ A Gmail Add-on that analyzes an opened email and shows a maliciousness score (0-
 
 Built as a home assignment for the Upwind Security Analyst role. The brief: build a Gmail Add-on, backed by a backend service, that analyzes an opened email and presents a maliciousness score with a verdict and the reasoning behind it, treating emails, attachments, and external responses as untrusted input. The scope and signals were left open. The design priority is security first, product second: a smaller feature set that is secure, explainable, and stable in a live demo.
 
-> **Status:** work in progress. Layers 1-3 are complete: the add-on runs in Gmail, gets an authenticated response from the deployed backend, and shows real findings from the deterministic signal engine and a bounded LLM check, with a provisional score. Backend security hardening comes next. Progress: [docs/development-layers.md](docs/development-layers.md).
+> **Status:** feature-complete and deployed. The add-on runs in Gmail against the live backend on Render: deterministic signals, a bounded AI check, a transparent score, backend hardening, one-click reporting to a (mock) security team, and the final card design. Remaining: demo material. Progress: [docs/development-layers.md](docs/development-layers.md).
 
 ---
 
@@ -23,7 +23,18 @@ Built as a home assignment for the Upwind Security Analyst role. The brief: buil
 ---
 
 ## What it does
-_To be written (Layer 6)._
+
+Open an email in Gmail and the WindyMail panel shows, within a few seconds:
+
+1. **A verdict** in a banner, with a word and a shape, never color alone: ☀️ **Safe** (0-29), 🌥️ **Suspicious** (30-69) or ⛈️ **Malicious** (70-100), plus what to do ("Don't click, reply, or download").
+2. **A risk score** from 0 to 100, as a bar and a number.
+3. **Why:** each warning sign in plain language with its severity ("▲ High risk: A link shows one web address but really goes to a different one").
+4. **🤖 AI check:** which pressure tactics an AI model found, in WindyMail's own fixed wording, never the model's words.
+5. **Report to Security Team** (organization mode): one click sends the score and the reason IDs, never the email itself, to the security team's webhook. Without a security team (personal mode), the card explains how to use Gmail's own "Report phishing" instead.
+
+Built for non-technical users, at work and at home ([ADR-015](docs/architecture-decisions.md)): plain language first, technical values kept off the card.
+
+_Screenshots: to be added._
 
 ## Architecture
 
@@ -40,6 +51,8 @@ Gmail ── user opens an email ──▶ Gmail Add-on (Apps Script, runs on Go
                                    │ 3. analyze → score → verdict
                                    ▼
                                  JSON verdict ──▶ Add-on validates it ──▶ CardService card
+
+Report button ── POST /api/v1/report + ID token ──▶ backend ──▶ SOC webhook (https, IDs only)
 ```
 
 | Component | Where | Responsibility |
@@ -76,7 +89,7 @@ The backend runs deterministic checks on every email ([`backend/app/signals/`](b
 
 **Fail safe.** If a check crashes on a crafted email, it adds "Some checks couldn't run" and never lowers the score; the error type is logged, never its message (which could contain email content).
 
-**Known blind spots.** Content hidden by stylesheets rather than inline styles. Proofpoint and Mimecast link wrappers (the target is encoded or held on their servers). A spoofed sender on a domain with DMARC policy `p=none` gets only a medium sender reason, so the verdict then rests on the other checks. Text past the size budget is not checked. The domain suffix list is bundled with the backend, so very new top-level domains may be parsed less precisely. Attachment contents are never opened, only names and types. Until the scoring model is final (Layer 5), the score is provisional: high 35, medium 15, low 5 points, summed and capped at 100.
+**Known blind spots.** Content hidden by stylesheets rather than inline styles. Proofpoint and Mimecast link wrappers (the target is encoded or held on their servers). A spoofed sender on a domain with DMARC policy `p=none` gets only a medium sender reason, so the verdict then rests on the other checks. Text past the size budget is not checked. The domain suffix list is bundled with the backend, so very new top-level domains may be parsed less precisely. Attachment contents are never opened, only names and types.
 
 ## LLM safety
 
@@ -139,11 +152,15 @@ The backend is reachable from the internet, receives attacker-written email, and
 | **Rate limit** | 20 requests per minute per user (`RATE_LIMIT_PER_MINUTE`), checked right after the token and before any analysis, so it also caps LLM spend per user | 429 + `Retry-After` |
 | **Strict input** | Unknown fields rejected, every string and list bounded | 422 |
 | **No echo** | Error responses never contain submitted values: a 422 gives only the field location and error type; any crash becomes a generic 500 | 422 / 500 |
-| **Outbound calls** | Explicit timeouts (LLM 5 s with one retry, Google certificates 5 s); URLs from emails are never fetched | — |
+| **Outbound calls** | Explicit timeouts (LLM 5 s with one retry, Google certificates 5 s, SOC webhook 5 s); URLs from emails are never fetched | — |
+
+**Reporting** (`POST /api/v1/report`, [ADR-008](docs/architecture-decisions.md)). Same token and rate limit as `/analyze`. The request carries the Gmail message ID, the score and reason IDs, and each ID must exist in the backend's own catalog (else 422), so no free text reaches the security team. The backend adds the verdict itself and a salted reporter hash, and posts to `SOC_WEBHOOK_URL` over https with no redirects, so no request can choose where reports go. A webhook failure is a 502, so the card never shows a false "sent". The score is the user's copy of what `/analyze` returned, so a report is treated as the user's claim (threat T11).
+
+**Card images** (`GET /static/{name}`). The wordmark and the three verdict banners are served from a fixed list of four files; any other name is 404, so no request can read another file.
 
 **Privacy in logs.** One line per request: request ID, method, path without query string, status, latency, and the user ID hashed with a salt generated at startup (never stored). No client IP (uvicorn's default access log is replaced), no headers, no tokens, no email content; the LLM step logs its outcome and latency only, and errors are logged by type, never by message. The request ID is returned as `X-Request-ID`, so a failed check can be matched to its log line.
 
-**Secrets.** Only in environment variables (Render dashboard): `GOOGLE_CLIENT_ID`, `ANTHROPIC_API_KEY` with a spend limit set at Anthropic. `.env` is gitignored; `.env.example` documents every setting. The backend refuses to start without `GOOGLE_CLIENT_ID`.
+**Secrets.** Only in environment variables (Render dashboard): `GOOGLE_CLIENT_ID`, `ANTHROPIC_API_KEY` with a spend limit set at Anthropic, and `SOC_WEBHOOK_URL` (https only; anyone holding it could post fake reports, and it is never logged). `.env` is gitignored; `.env.example` documents every setting. The backend refuses to start without `GOOGLE_CLIENT_ID`.
 
 **In the add-on.** Least-privilege Gmail scopes (only the open message), an outbound allowlist limited to the backend, response validation before rendering, and every untrusted string escaped (see [Architecture](#architecture)).
 
@@ -179,7 +196,7 @@ node addon/test/logic.test.js     # from the repo root: add-on request/response/
 
 ## Deployment
 
-**Backend on Render** ([ADR-012](docs/architecture-decisions.md)). Free tier, Frankfurt, auto-deploy on push to `main`; configuration in [`render.yaml`](render.yaml). Set `GOOGLE_CLIENT_ID` and `ANTHROPIC_API_KEY` in the Render dashboard, never in the repo. Each call to the AI check writes one log line with its outcome, model and latency (`llm: outcome=ok model=claude-haiku-5-5 latency_ms=1955`), never the email or the answer. The free tier sleeps after ~15 idle minutes, so an UptimeRobot monitor pings the unauthenticated `GET /health` (fixed `{"status":"ok"}`, nothing else) every 5 minutes.
+**Backend on Render** ([ADR-012](docs/architecture-decisions.md)). Free tier, Frankfurt, auto-deploy on push to `main`; configuration in [`render.yaml`](render.yaml). Set `GOOGLE_CLIENT_ID`, `ANTHROPIC_API_KEY` and, for organization mode, `SOC_WEBHOOK_URL` in the Render dashboard, never in the repo. The demo's security team is a [webhook.site](https://webhook.site) URL, so a report can be shown arriving live. Each call to the AI check writes one log line with its outcome, model and latency (`llm: outcome=ok model=claude-haiku-5-5 latency_ms=1955`), never the email or the answer. The free tier sleeps after ~15 idle minutes, so an UptimeRobot monitor pings the unauthenticated `GET /health` (fixed `{"status":"ok"}`, nothing else) every 5 minutes.
 
 **Add-on with clasp:**
 ```bash
@@ -192,9 +209,30 @@ Then in the Apps Script editor: **Deploy → Test deployments → Install**, and
 Google shows an "unverified app" warning for a personal test deployment; that is expected. A real rollout would go through Google's verification or a Workspace admin install.
 
 ## Trade-offs, limitations, and future work
-_Trade-offs and limitations: to be written (Layer 7)._
+
+**Trade-offs**
+* **Rules first, AI second.** The deterministic checks decide most of the score and are testable and explainable; the AI adds at most 20 points and never subtracts ([ADR-003](docs/architecture-decisions.md)). It catches less nuance than letting a model judge, but a fooled model can't make a malicious email look safe.
+* **Labels, not words, from the AI** ([ADR-019](docs/architecture-decisions.md)). The user sees which tactics were found, not a tailored explanation, so the attacker's text can never reach the card through the model.
+* **One bounded call, not an agent.** Faster, cheaper and explainable; no tool use an email could steer (see [LLM safety](#llm-safety)).
+* **Hand-set weights,** checked against 16 realistic emails, not learned from data. Easy to explain and audit; not a measured error rate.
+* **Explainable card vs. an attacker's test lab.** The card shows plain-language reasons and the total, but not the parsed values or per-reason points (threat T12). The score itself still tells an attacker whether a draft passed.
+* **Manual reporting only** ([ADR-008](docs/architecture-decisions.md)). No automatic alerts, so no flood of false positives, but the security team sees only what users report.
+* **Free hosting.** Render's free tier sleeps when idle; a keep-warm ping covers it ([ADR-012](docs/architecture-decisions.md)). One instance, in-memory state.
+
+**Limitations**
+* **Single instance, in-memory state.** The rate limit, the user-hash salt and its counters reset on restart or redeploy, and don't scale across instances.
+* **The AI check is not fully deterministic.** The same email can get one more or one fewer AI finding between runs. It can only add, so the verdict rarely changes, and the rules alone decide most scores.
+* **What the checks can't see:** attachment contents (names and types only), content hidden by stylesheets, Proofpoint and Mimecast link wrappers, text past the size budget, and the age or reputation of a domain (links are never fetched). See [Signals](#signals).
+* **Email text goes to Anthropic** while the AI check is on, after best-effort masking of links, addresses and numbers. Names and numbers written out in words pass through.
+* **The reporter is a hash,** valid within one backend instance; a real security team would need the reporter's address, a privacy choice left to the organization.
+* **Brand list:** about 20 commonly impersonated brands, English and Hebrew wording only.
+* **Test deployment.** Google shows an "unverified app" warning; a real rollout needs Google's verification or a Workspace admin install.
 
 **Future work**
+* **Automatic alerts for near-certain threats** (score 85 or more, organization mode), sent by the backend with its own score, once per message, with a line on the card saying it was reported ([ADR-008](docs/architecture-decisions.md), US-08).
+* **Domain age and link reputation** from our own code with fixed inputs and timeouts, never chosen by the model.
+* **Herd Immunity:** "N people in your organization received a similar message", from hashed fingerprints only ([ADR-009](docs/architecture-decisions.md)).
+* **Shared state** (Redis) for the rate limit and a persistent salt, so the backend can run on several instances.
 * **Analyst role for technical details** ([ADR-020](docs/architecture-decisions.md)). The card hides the parsed values and per-reason points from everyone, so an attacker testing drafts learns less (threat T12). Analysts would get them back, with the role decided by the backend, never by the add-on: the backend checks the email in the Google ID token it already verifies against an `ANALYST_EMAILS` setting (in a real organization, a Workspace admin group), strips `details` and `points` for everyone else, and logs each analyst view by hashed user ID. Not built for the deadline: it needs the `email` scope from every user and adds a security-critical setting.
 
 ## Design documents
@@ -203,3 +241,4 @@ _Trade-offs and limitations: to be written (Layer 7)._
 * [Development layers](docs/development-layers.md): build order and progress
 * [User stories](docs/user-stories.md)
 * [Threat model](docs/threat-model.md)
+* [Demo script](docs/demo-script.md)

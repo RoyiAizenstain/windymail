@@ -471,15 +471,15 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 ---
 
 ## Layer 7: Demo & Final README
-**Status:** In progress (27.10)
+**Status:** In progress (27.10). Done: README, demo script, secrets check. Remaining (You): demo emails, screenshots, fallback recording
 
 - [ ] Screenshots for README (after Layer 6.5)
 - [ ] Demo email set prepared in the demo account
-- [ ] Demo script
+- [x] Demo script ([demo-script.md](demo-script.md)): demo emails that survive real sending, 7-minute flow, failure handling, likely questions
 - [ ] Fallback recording
-- [ ] Pre-demo warm-up step in the demo script (call `/health`, run one scan)
-- [ ] README: trade-offs, limitations, future work; final review
-- [ ] Repo check: no secrets committed
+- [x] Pre-demo warm-up step in the demo script (call `/health`, run one scan)
+- [x] README: status, "What it does", reporting and card images in Security, trade-offs, limitations, future work (screenshots still to add)
+- [x] Repo check: no secrets committed (27.10: files and full git history scanned for API keys, Google tokens, private keys, webhook URLs; only `.env.example` tracked)
 
 ---
 
