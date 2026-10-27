@@ -31,7 +31,7 @@ t('utf8Length matches Buffer', () => { for (const s of ['abc','ש','😀x','é�
 t('known severity kept, unknown dropped to null', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a',severity:'high'},{text:'b',severity:'<b>evil</b>'}]}); assert.equal(r.reasons[0].severity,'high'); assert.equal(r.reasons[1].severity,null); });
 t('reason label has shape and severity word', () => { assert.equal(ctx.reasonLabel({severity:'high'}), '▲ High risk'); assert.equal(ctx.reasonLabel({severity:'medium'}), '● Worth checking'); assert.equal(ctx.reasonLabel({severity:'low'}), '○ Minor'); });
 t('reason label without severity is empty', () => assert.equal(ctx.reasonLabel({severity:null}), ''));
-t('score line: bar and exact score', () => { const ui = ctx.VERDICT_UI.suspicious; assert.equal(ctx.scoreLine(52, ui), '<font color="#B06000">■■■■■</font>□□□□□  <b>52</b>/100'); });
+t('score line: bar, exact score and verdict word', () => { const ui = ctx.VERDICT_UI.suspicious; assert.equal(ctx.scoreLine(52, ui), '<font color="#B06000">■■■■■</font>□□□□□  <b>52</b>/100 · Suspicious'); });
 t('score line at the edges', () => { assert.ok(ctx.scoreLine(0, ctx.VERDICT_UI.safe).includes('></font>□□□□□□□□□□  <b>0</b>')); assert.ok(ctx.scoreLine(100, ctx.VERDICT_UI.malicious).includes('■■■■■■■■■■</font>  <b>100</b>')); });
 t('every verdict has a word, label, color and action', () => { for (const v of ['safe','suspicious','malicious']) { const ui = ctx.VERDICT_UI[v]; assert.ok(ui.word && ui.label && /^#[0-9A-F]{6}$/.test(ui.color) && ui.action, v); } });
 t('verdict word is upper case in its color', () => assert.equal(ctx.verdictWord(ctx.VERDICT_UI.malicious), '<font color="#C5221F"><b>MALICIOUS</b></font>'));

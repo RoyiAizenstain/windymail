@@ -452,6 +452,7 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 **Step 6: Images**
 - [x] Backend serves the card images from a fixed list (`GET /static/{name}`, anything else 404, no token: Gmail fetches them); `ASSET_VERSION` in the add-on refreshes Gmail's image cache. 9 new tests (497 total); add-on checks 52
 - [x] Round 2: banners narrowed from 600 to 520 px on the canvas (word and picture about 15% larger in Gmail), rendered at 2×; `ASSET_VERSION` 2
+- [x] Header in the brand font (font option 1, Sora): the wordmark image replaces the text header on the result card; the verdict word is back in the score line as the text fallback. Top bar white (`primaryColor`), buttons blue (`secondaryColor`)
 - [x] Card matched to mockup panel A: header with logo, "WindyMail" and the verdict word (the text fallback if the banner doesn't load); score line without the word; organization mode: no report section, a one-line note above the footer button. Add-on checks 54
 
 **Step 7: Live check**

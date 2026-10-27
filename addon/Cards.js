@@ -84,9 +84,10 @@ function buildHomepageCard() {
 function buildResultCard(message, result) {
   var ui = VERDICT_UI[result.verdict];
 
-  // No wordmark here: the header names WindyMail and carries the verdict word in
-  // text, and the reasons should start as high as possible (homepage only).
+  // The wordmark is the header: CardService can't set a header font, so the brand
+  // font (Sora) comes as an image.
   var verdict = CardService.newCardSection()
+    .addWidget(cardImage('wordmark', 'WindyMail'))
     .addWidget(cardImage(result.verdict, ui.word + ' (' + ui.label + ')'))
     .addWidget(
       CardService.newDecoratedText().setTopLabel('Risk score').setText(scoreLine(result.score, ui))
@@ -118,9 +119,7 @@ function buildResultCard(message, result) {
     .addWidget(decorated('From', message.getFrom()))
     .addWidget(decorated('Subject', message.getSubject() || '(no subject)'));
 
-  // The header subtitle is the verdict in text, so the card reads the same if the
-  // banner image doesn't load.
-  var card = newCard(ui.word).addSection(verdict).addSection(reasons);
+  var card = CardService.newCardBuilder().addSection(verdict).addSection(reasons);
   if (aiSection) card.addSection(aiSection);
   if (result.mode !== 'organization') card.addSection(buildPersonalReportSection());
   card.addSection(email);
@@ -147,12 +146,15 @@ function verdictWord(ui) {
   return '<font color="' + ui.color + '"><b>' + ui.word.toUpperCase() + '</b></font>';
 }
 
-/** "■■■■■□□□□□  52/100": filled squares read without color; the number is exact. */
+/**
+ * "■■■■■□□□□□  52/100 · Suspicious": filled squares read without color, the number
+ * is exact, and the verdict word stays in text in case the banner doesn't load.
+ */
 function scoreLine(score, ui) {
   var filled = Math.round(score / 10);
   return (
     '<font color="' + ui.color + '">' + repeat('■', filled) + '</font>' +
-    repeat('□', 10 - filled) + '  <b>' + score + '</b>/100'
+    repeat('□', 10 - filled) + '  <b>' + score + '</b>/100 · ' + ui.word
   );
 }
 
