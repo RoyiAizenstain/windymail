@@ -243,6 +243,13 @@ Google shows an "unverified app" warning for a personal test deployment; that is
 * **Domain age and link reputation** from our own code with fixed inputs and timeouts, never chosen by the model.
 * **Herd Immunity:** "N people in your organization received a similar message", from hashed fingerprints only ([ADR-009](docs/architecture-decisions.md)).
 * **Shared state** (Redis) for the rate limit and a persistent salt, so the backend can run on several instances.
+* **Deep scan on request** (US-05): a second, slower check the user starts on a Suspicious email, for example domain age and reputation. Today there is one scan per open ([ADR-007](docs/architecture-decisions.md)).
+
+**What I'd do differently**
+* **Build the test emails before the scoring rules.** The 16-email set came after the first scoring model, and its first run showed 6 of 7 malicious emails scored too mildly. Writing expected verdicts first would have shaped the rules from the start.
+* **Settle the platform's UI limits first.** CardService sets no fonts or sizes, can't center a footer button, and Gmail's side panel doesn't draw Columns. A one-hour spike on the card would have saved several design rounds.
+* **Design for the attacker's view from the start.** The card first showed per-reason points and parsed values, then lost them once the test-lab risk (threat T12) was written down. That belongs in the first threat model, not the last.
+* **Treat image caching as part of deploys.** Gmail caches card images by URL; a version in the URL and a "backend live first" rule came after one stale banner.
 * **Analyst role for technical details** ([ADR-020](docs/architecture-decisions.md)). The card hides the parsed values and per-reason points from everyone, so an attacker testing drafts learns less (threat T12). Analysts would get them back, with the role decided by the backend, never by the add-on: the backend checks the email in the Google ID token it already verifies against an `ANALYST_EMAILS` setting (in a real organization, a Workspace admin group), strips `details` and `points` for everyone else, and logs each analyst view by hashed user ID. Not built for the deadline: it needs the `email` scope from every user and adds a security-critical setting.
 
 ## Design documents
