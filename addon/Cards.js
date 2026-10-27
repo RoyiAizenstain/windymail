@@ -208,7 +208,7 @@ function aiLines(ai) {
   found = found.map(function (line) {
     return colored('<b>' + toPlainText(line) + '</b>', AI_COLOR);
   });
-  if (found.length === 0) return [toPlainText('The AI check read this email and found no pressure tactics.')];
+  if (found.length === 0) return [toPlainText("The AI check read the whole email and didn't find it pressuring.")];
   return [toPlainText('The AI check read this email and found:')].concat(found);
 }
 
