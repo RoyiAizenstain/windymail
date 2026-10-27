@@ -16,7 +16,8 @@
       "name": "WindyMail",
       "logoUrl": "https://www.gstatic.com/images/icons/material/system/2x/air_googblue_48dp.png",
       "layoutProperties": {
-        "primaryColor": "#1a73e8"
+        "primaryColor": "#3C4043",
+        "secondaryColor": "#1A73E8"
       },
       "homepageTrigger": {
         "runFunction": "onHomepage"
