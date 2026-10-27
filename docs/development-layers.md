@@ -487,7 +487,7 @@ Rules: CardService only; the verdict never relies on color alone (word + shape);
 ---
 
 ## Layer 8: Attachment inspection
-**Status:** Built (27.10): checks 1-5, kept simple. Backend 532 tests (corpus 18/18), add-on checks 65, inspector run on real files made by a zip tool. Live Gmail check pending.
+**Status:** Done (27.10): checks 1-5, kept simple. Backend 532 tests (corpus 18/18), add-on checks 65, inspector run on real files made by a zip tool, and checked live in Gmail.
 **Stories:** US-03 · **ADRs:** 021, 013, 017 · **Threats:** T13
 
 Before this layer, only an attachment's name, type and size were checked (ADR-013). This layer adds structural facts about each file, read by the add-on, without sending the file: the bytes still never leave Gmail.
@@ -522,7 +522,7 @@ Before this layer, only an attachment's name, type and size were checked (ADR-01
 **Step 4: Card and docs**
 - [x] "Couldn't check inside an attachment" as a low reason when inspection fails, so it is never a silent gap
 - [x] README (Signals, LLM safety: inner names never go to the AI), threat model T13, ADR-021 accepted
-- [ ] Check: Gmail test with real attachments sent to the demo inbox
+- [x] Check: Gmail test with real attachments (27.10): a `.docx` hiding a macro project and a PDF with JavaScript, sent to the demo inbox. Both found (high, medium) plus the AI's pressure tag: 65, Suspicious. Reported from the card: the report carried the new reason IDs only
 
 **Done when:** a disguised program, an encrypted zip and a macro document each get the right reason in Gmail; a malformed or huge attachment never breaks the card; tests and corpus pass.
 

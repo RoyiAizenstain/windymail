@@ -55,12 +55,12 @@ Non-technical users, both **employees in an organization** and **private Gmail u
 **Wednesday 28.10.2026, 11:00.** Scope cut per ADR-013. Herd Immunity is the only stretch goal.
 
 ## Open items
-* **Status (27.10):** Layers 1-8 done and live, except Layer 8's Gmail check.
+* **Status (27.10):** Layers 1-8 done, live and checked in Gmail.
   * 1-5: skeleton, rule engine, bounded LLM, backend security (`app/security.py`), scoring.
   * 6: Report button (`/api/v1/report`, mock SOC on webhook.site).
   * 6.5 UI: wordmark and verdict banners, colored severity labels, AI findings as purple tags, Report in a fixed footer; no Technical details on the card (T12; analyst view designed as ADR-020).
   * 7: README with six screenshots, demo script, secrets check; no fallback recording (the screenshots are the fallback).
-  * 8: attachment inspection (ADR-021).
-* **Open:** Layer 8 live check in Gmail (deploy order: backend live first, then `clasp push`). Optional: personal mode live, the injection email without its injected line (Layer 3), a 429 from Gmail (Layer 4). Herd Immunity (stretch) not started.
+  * 8: attachment inspection (ADR-021); live test email "[WindyMail test] Attachments: Q4 report and form" (macro .docx + JavaScript PDF, 65).
+* **Open, all optional:** personal mode live, the injection email without its injected line (Layer 3), a 429 from Gmail (Layer 4). Herd Immunity (stretch) not started.
 * **Scoring (ADR-010, accepted):** high 35 / medium 15 / low 5 per reason, LLM +20 cap; decisive findings set a minimum of 70: `invoice.pdf.exe`, right-to-left file names, hidden AI instructions, a file whose real type contradicts its trusted name. Any scoring change must keep `pytest tests/test_corpus.py` green (18 realistic emails with expected verdicts).
 * **Hosting:** Render free tier with an UptimeRobot keep-warm ping (ADR-012).

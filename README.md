@@ -44,6 +44,11 @@ Built for non-technical users, at work and at home ([ADR-015](docs/architecture-
 | <img src="docs/screenshots/ai-check.png" width="220" alt="The AI check finds pressure tactics no rule matched"> | <img src="docs/screenshots/report-sent.png" width="220" alt="Confirmation after reporting to the security team"> | <img src="docs/screenshots/homepage.png" width="220" alt="Homepage explaining the three verdicts"> |
 | The AI flags pressure that no phrase rule matched, in fixed wording | One click; the security team gets IDs and the score, never the email | How to read a result |
 
+| Inside attachments |
+|:---:|
+| <img src="docs/screenshots/attachments.png" width="220" alt="A .docx with hidden macros and a PDF that runs JavaScript, found without sending the files"> |
+| A `.docx` hiding macros and a PDF that runs JavaScript: found from a few facts, the files never left Gmail: 65 |
+
 Screenshots from the live add-on in Gmail (27.10).
 
 ## Architecture
