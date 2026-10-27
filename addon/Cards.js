@@ -138,7 +138,6 @@ function buildResultCard(message, result) {
   if (aiSection) card.addSection(aiSection);
   if (result.mode !== 'organization') card.addSection(buildPersonalReportSection());
   card.addSection(email);
-  if (result.reasons.length > 0) card.addSection(buildDetailsSection(result.reasons));
   if (result.mode === 'organization') {
     // Last, right above the footer button it explains.
     card.addSection(
@@ -286,27 +285,6 @@ function buildReportedCard() {
       )
     );
   return newCard('Reported').addSection(section).build();
-}
-
-/** Collapsed analyst view (US-10): what each check found, in technical terms. */
-function buildDetailsSection(reasons) {
-  var section = CardService.newCardSection()
-    .setHeader('Technical details')
-    .setCollapsible(true)
-    .setNumUncollapsibleWidgets(1)
-    .addWidget(CardService.newTextParagraph().setText('For security teams: what each check found.'));
-  reasons.forEach(function (reason) {
-    if (reason.details) {
-      section.addWidget(CardService.newTextParagraph().setText(detailsLine(reason)));
-    }
-  });
-  return section;
-}
-
-/** "• (+35) Authentication-Results: dmarc=fail": the points show how the score adds up. */
-function detailsLine(reason) {
-  var points = reason.points === null || reason.points === undefined ? '' : '(+' + reason.points + ') ';
-  return '• ' + points + toPlainText(reason.details);
 }
 
 /** Shown when the backend is unreachable, slow, or returns something invalid. */

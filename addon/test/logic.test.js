@@ -47,9 +47,6 @@ t('ai did not run', () => assert.deepEqual(Array.from(ctx.aiLines({ran:false, ta
 t('ai reason labelled', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'Pressure', severity:'medium', source:'ai'},{text:'Link', severity:'high', source:'evil'}]}); assert.equal(ctx.reasonLabel(r.reasons[0]), '<font color="#B06000">● Worth checking</font> · <font color="#7627BB">AI check</font>'); assert.equal(ctx.reasonLabel(r.reasons[1]), '<font color="#C5221F">▲ High risk</font>'); });
 t('ai impersonation wording', () => assert.deepEqual(Array.from(ctx.aiLines({ran:true, tactics:['impersonation'], injection:false})), ['The AI check read this email and found:', `<font color="#7627BB"><b>• Pretends to come from a company, bank or person it isn't</b></font>`]));
 t('impersonation passes validation', () => assert.deepEqual(Array.from(ctx.parseAnalyzeResponse({...good, ai:{ran:true, tactics:['impersonation']}}).ai.tactics), ['impersonation']));
-t('points shown in details', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', severity:'high', details:'Extension: .exe', points:35}]}); assert.equal(ctx.detailsLine(r.reasons[0]), '• (+35) Extension: .exe'); });
-t('invalid points dropped', () => { for (const points of [-1, 101, 4.5, '35', null, undefined, '<b>9</b>']) { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', details:'d', points}]}); assert.equal(r.reasons[0].points, null); assert.equal(ctx.detailsLine(r.reasons[0]), '• d'); } });
-t('zero points shown', () => assert.equal(ctx.detailsLine({details:'d', points:0}), '• (+0) d'));
 t('reason id kept when catalog-shaped', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', id:'dmarc_fail'},{text:'b', id:'<b>x</b>'},{text:'c', id:5}]}); assert.deepEqual(r.reasons.map(x => x.id), ['dmarc_fail', null, null]); });
 t('report request has exactly schema fields', () => assert.deepEqual(Object.keys(ctx.buildReportRequest('m1', 80, [])).sort(), ['message_id','reason_ids','score']));
 t('report request filters and dedupes ids', () => assert.deepEqual(Array.from(ctx.buildReportRequest('m1', 80, ['dmarc_fail','','a,b','dmarc_fail','x'.repeat(65),'link_ip']).reason_ids), ['dmarc_fail','link_ip']));
@@ -65,4 +62,5 @@ t('report footer: blue button that calls onReport', () => {
   assert.ok(log.some(([k, a]) => k === 'setFunctionName' && a === 'onReport'));
   assert.ok(!log.some(([k]) => k === 'newColumns'));
   delete ctx.CardService; });
+t('technical details and points are not kept', () => { const r = ctx.parseAnalyzeResponse({...good, reasons:[{text:'a', severity:'high', details:'Extension: .exe', points:35}]}); assert.equal(r.reasons[0].details, undefined); assert.equal(r.reasons[0].points, undefined); });
 console.log('addon logic checks passed: ' + n);

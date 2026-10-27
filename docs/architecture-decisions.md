@@ -115,7 +115,7 @@ Related: [Development Layers](development-layers.md) · [User Stories](user-stor
 **Status:** Accepted
 **Context:** The target user is not a security expert. WindyMail must work both for an employee in an organization and for a private Gmail user.
 **Decision:**
-* Main view uses plain language only; technical details stay collapsed (US-10).
+* Main view uses plain language only; technical details are not shown on the card (US-10, ADR-017).
 * Verdict is never conveyed by color alone: always label + icon + text (accessibility).
 * Mode is determined by configuration: if `SOC_WEBHOOK_URL` is set, organization mode (Report button, Herd Immunity if built); otherwise personal mode (guidance to use Gmail's "Report phishing" instead).
 **Consequences:** One product for both audiences. Organization-only features degrade gracefully instead of breaking.
@@ -157,6 +157,7 @@ README.md
 **Context:** The response must not reflect attacker-controlled text (T2, T6), but a reason is only useful when it names the concrete finding ("the link says paypal.com but goes to bit.ly"), and US-10 needs link destinations and authentication results.
 **Decision:** `reasons[].details` may include values the backend has parsed and normalized itself: domains, IP addresses, file extensions, and SPF/DKIM/DMARC results. Each is restricted to a narrow character set (for domains, lowercase IDNA form, `[a-z0-9.-]`) and length-capped. Subjects, body text, display names, full URLs, and filenames are never echoed. `reasons[].text` stays fixed wording from the backend, with counts only.
 **Consequences:** Reasons are concrete and verifiable without becoming a channel for attacker text. The add-on still escapes everything it renders. The no-echo test keeps covering subjects and body text.
+**Card (Layer 6.5, 27.10):** the add-on no longer shows `details` or `points` (it had a collapsed "Technical details" section). Showing which parsed value tripped which check, and its weight, makes the add-on a better test lab for an attacker tuning a phishing email (threat T12). The plain-language reasons stay; the backend still returns both fields, and analysts get reason IDs in reports.
 
 ## ADR-018: DMARC failure severity follows the domain's policy
 **Status:** Accepted
@@ -186,11 +187,11 @@ None at the moment. ADR-010 was the last one; it is kept here with its history.
 **Question:** How to combine deterministic signals and the capped LLM signal into one explainable 0-100 score. Constraint from ADR-003 applies.
 **History:** Provisional in Layer 2 (26.10): points per deterministic finding by severity, summed and clamped. LLM half in Layer 3 (27.10): LLM findings only add points, capped at +20, never lower the score (ADR-019). A first check in Layer 5 found three weaknesses: a CEO gift-card scam scored 15 (Safe) even with the AI; a lookalike sender asking to verify an account scored 50 (Suspicious); deceptions no legitimate email uses scored 35 (Suspicious) alone.
 **Decision:**
-* **Points per reason by severity:** high 35, medium 15, low 5, counted once per reason (ten shortened links count once, so volume alone can't reach Malicious), summed and clamped to 0-100. Anyone can add up the reasons on the card and get the score.
+* **Points per reason by severity:** high 35, medium 15, low 5, counted once per reason (ten shortened links count once, so volume alone can't reach Malicious), summed and clamped to 0-100. The API response carries each reason's points, so the score can be checked; the card itself doesn't show the weights (ADR-017, threat T12).
 * **LLM:** its reasons add at most +20 in total and never subtract (ADR-003, ADR-019).
 * **Decisive findings set a minimum of 70 (Malicious):** a trusted extension in front of a program (`invoice.pdf.exe`), the right-to-left character trick in a file name, and instructions to an AI hidden from the reader. No legitimate email does these, so one alone is enough. The list is short, fixed in `scoring.py`, and every entry needs a reason.
 * **Pressure with a request** (`manipulation_strong`: urgency or authority together with a request for credentials or money) is high: a text-only scam reaches Suspicious on its own, and Malicious with any other strong sign.
 * **HTML and SVG attachments are high:** they are a top phishing vector (credential pages, HTML smuggling) and rarely legitimate; the rare real one (some voicemail or statement notices) becomes Suspicious.
 * **Hebrew brand names** count in the display-name check, as whole phrases only ("בנק לאומי", not "לאומי", which also means "national").
-* **Explainable on the card:** each reason carries its points (`reasons[].points`), shown in Technical details; when the floor lifts the score, the summary says so. The add-on never computes points itself.
+* **Explainable on the card:** each reason carries its points (`reasons[].points`) in the API response, not shown on the card since 27.10 (ADR-017); when the floor lifts the score, the summary says so. The add-on never computes points itself.
 **Consequences:** The score stays additive and explainable. Legitimate mail that combines pressure with a request (an "urgent, overdue invoice" from a real vendor) becomes Suspicious; the advice "check before you pay" fits that case. Weights are hand-set, not learned; they are checked against a fixed set of realistic emails with expected verdicts (`backend/tests/fixtures/corpus/`), which guards against regressions but is not a measured error rate. One case was decided Suspicious on purpose: a brand in the display name plus a link whose text names another site (55) has two strong signs but neither decisive alone; adding a combination rule would make the score harder to explain, and Suspicious already says not to click.

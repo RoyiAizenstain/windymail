@@ -191,13 +191,9 @@ function parseAnalyzeResponse(raw) {
         id: typeof r.id === 'string' && REASON_ID.test(r.id) ? r.id : null,
         text: r.text,
         severity: SEVERITIES.indexOf(r.severity) === -1 ? null : r.severity,
-        details: String(r.details || ''),
         fromAi: r.source === 'ai',
-        // What it added to the score (ADR-010); anything but a whole number 0-100 is dropped.
-        points:
-          typeof r.points === 'number' && r.points % 1 === 0 && r.points >= 0 && r.points <= 100
-            ? r.points
-            : null,
+        // `details` and `points` are not kept: the card doesn't show the parsed values
+        // or the scoring weights, so testing drafts against it reveals less (oracle risk).
       };
     });
 

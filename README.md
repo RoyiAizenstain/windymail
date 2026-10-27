@@ -59,7 +59,7 @@ API contract, request flow, and component diagram: [docs/architecture.md](docs/a
 
 ## Signals
 
-The backend runs deterministic checks on every email ([`backend/app/signals/`](backend/app/signals/)). Each finding becomes one plain-language reason with a severity word ("High risk", "Worth checking", "Minor"), so severity never relies on color. Repeated findings are grouped with a count ("3 links show one web address but really go to a different one"). For security teams, a collapsed "Technical details" section shows the parsed values behind each reason: domains, IP addresses, file extensions and authentication results only, never subjects, body text, display names or full URLs ([ADR-017](docs/architecture-decisions.md)).
+The backend runs deterministic checks on every email ([`backend/app/signals/`](backend/app/signals/)). Each finding becomes one plain-language reason with a severity word ("High risk", "Worth checking", "Minor"), so severity never relies on color. Repeated findings are grouped with a count ("3 links show one web address but really go to a different one"). The backend also returns the parsed values behind each reason (domains, IP addresses, file extensions and authentication results only, never subjects, body text, display names or full URLs) and the points each reason added, but the card shows neither: an attacker who installs WindyMail to test phishing drafts would learn exactly which value tripped which check and by how much ([ADR-017](docs/architecture-decisions.md), threat T12). Security teams get the reason IDs in every report.
 
 | Area | What is checked | Severity |
 |---|---|---|
@@ -98,7 +98,7 @@ An LLM (Claude Haiku, `claude-haiku-5-5`) adds what fixed rules can't: recognizi
 
 ## Scoring
 
-The score is additive and explainable: every reason on the card carries its points, and they add up to the score ([ADR-010](docs/architecture-decisions.md)).
+The score is additive and explainable: every reason carries its points in the API response, and they add up to the score ([ADR-010](docs/architecture-decisions.md)). The card shows the reasons and the total but not the weights, to give an attacker testing drafts less to work with (threat T12).
 
 | | Points |
 |---|---|
