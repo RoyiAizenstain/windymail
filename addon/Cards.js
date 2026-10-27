@@ -61,9 +61,7 @@ var REPORT_BUTTON_COLOR = '#1A73E8';
 
 /** Shown with no email open: what WindyMail does and how to read a result. */
 function buildHomepageCard() {
-  var intro = CardService.newCardSection()
-    .addWidget(cardImage('wordmark', 'WindyMail'))
-    .addWidget(
+  var intro = CardService.newCardSection().addWidget(
       CardService.newTextParagraph().setText(
         'Open an email and WindyMail checks it for signs of phishing and scams, then tells you why.'
       )
@@ -79,16 +77,26 @@ function buildHomepageCard() {
         .setWrapText(true)
     );
   });
-  return CardService.newCardBuilder().addSection(intro).addSection(legend).build();
+  return CardService.newCardBuilder()
+    .addSection(wordmarkSection())
+    .addSection(intro)
+    .addSection(legend)
+    .build();
+}
+
+/**
+ * The wordmark in its own section, so Gmail draws a line under it. It is the
+ * header: CardService can't set a header font, so the brand font (Sora) comes as
+ * an image, centered in the image itself.
+ */
+function wordmarkSection() {
+  return CardService.newCardSection().addWidget(cardImage('wordmark', 'WindyMail'));
 }
 
 function buildResultCard(message, result) {
   var ui = VERDICT_UI[result.verdict];
 
-  // The wordmark is the header: CardService can't set a header font, so the brand
-  // font (Sora) comes as an image.
   var verdict = CardService.newCardSection()
-    .addWidget(cardImage('wordmark', 'WindyMail'))
     .addWidget(cardImage(result.verdict, ui.word + ' (' + ui.label + ')'))
     .addWidget(
       CardService.newDecoratedText().setTopLabel('Risk score').setText(scoreLine(result.score, ui))
@@ -120,7 +128,10 @@ function buildResultCard(message, result) {
     .addWidget(decorated('From', message.getFrom()))
     .addWidget(decorated('Subject', message.getSubject() || '(no subject)'));
 
-  var card = CardService.newCardBuilder().addSection(verdict).addSection(reasons);
+  var card = CardService.newCardBuilder()
+    .addSection(wordmarkSection())
+    .addSection(verdict)
+    .addSection(reasons);
   if (aiSection) card.addSection(aiSection);
   if (result.mode !== 'organization') card.addSection(buildPersonalReportSection());
   card.addSection(email);
